@@ -5,9 +5,11 @@ pages_build_output_dir = "public"
 [[d1_databases]]
 binding = "DB"
 database_name = "techfinder-db"
-# Replace with the id printed by: npx wrangler d1 create techfinder-db
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "fb02ed61-d874-4ccb-ae3c-b86287d89329"
 
-# ACCESS_TEAM_DOMAIN, ACCESS_AUD and (optional) ALLOWED_EMAILS are set in the
-# Cloudflare dashboard: Pages project > Settings > Variables and Secrets.
-# For local dev they go in .dev.vars (see .dev.vars.example).
+# Cloudflare Access login (Zero Trust > Access > Applications > Techfinder Accounting).
+# These are not secrets: the team domain is public and the AUD tag only identifies the app.
+# Who may log in is controlled by the Access policy (an email list) in the dashboard.
+[vars]
+ACCESS_TEAM_DOMAIN = "https://dark-river-f212.cloudflareaccess.com"
+ACCESS_AUD = "721b46efbf727a0982411950be4b8133edea0d225dae90931de7b73f3c04f674"
