@@ -167,6 +167,10 @@
   @keyframes toastin{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
 
   .note-banner{background:var(--teal-light); border:1px solid #C8E4DF; color:#1F5C50; padding:12px 16px; border-radius:9px; font-size:13.5px; margin-bottom:18px; display:flex; gap:10px; align-items:flex-start;}
+  /* Viewer accounts: hide every action that changes data (the API refuses them anyway). */
+  body.readonly [data-action^="new-"], body.readonly [data-action^="edit-"], body.readonly [data-action^="delete-"],
+  body.readonly [data-action^="save-"], body.readonly [data-action="qt-to-receipt"], body.readonly [data-action="mark-wht-cert-received"]{display:none !important;}
+  body.readonly select[data-action="qt-status"], body.readonly input[data-action="toggle-wht-cert"]{pointer-events:none; opacity:.6;}
   .note-banner.warn{background:var(--amber-light); border-color:#F3DCB0; color:#7A4A0A;}
 
   .empty-state{text-align:center; padding:60px 20px; color:var(--muted);}
@@ -230,6 +234,9 @@ let modal = null; // {type, payload}
 let toastMsg = null;
 let toastTimer = null;
 let currentUser = null; // email of the logged-in user, from /api/data
+let currentRole = null; // 'admin' | 'editor' | 'viewer', from /api/data
+const ROLE_LABELS = {admin:'ผู้ดูแลระบบ', editor:'ผู้แก้ไข', viewer:'ดูอย่างเดียว'};
+const ROLE_HINTS = {admin:'ทำได้ทุกอย่าง รวมถึงเพิ่ม/ลบผู้ใช้', editor:'สร้าง แก้ไข และลบเอกสารได้', viewer:'ดูข้อมูลและพิมพ์เอกสารได้ แต่แก้ไขไม่ได้'};
 
 // Throws on any failure, so a network error or expired login never
 // starts the app with an empty state that the next save would write over real data.
@@ -238,6 +245,8 @@ async function loadState(){
   if(!res.ok) throw new Error('load failed with status ' + res.status);
   const data = await res.json();
   currentUser = data.user || null;
+  currentRole = data.role || null;
+  document.body.classList.toggle('readonly', currentRole==='viewer');
   if(data.value){
     const parsed = JSON.parse(data.value);
     const base = defaultState();
@@ -254,6 +263,10 @@ async function saveState(){
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ value: JSON.stringify(state) })
     });
+    if(res.status===403 && currentRole==='viewer'){
+      showToast('บัญชีนี้ดูได้อย่างเดียว ไม่สามารถบันทึกได้');
+      return;
+    }
     if(res.status===401 || res.status===403){
       showToast('เซสชันหมดอายุ กรุณาโหลดหน้าใหม่เพื่อเข้าสู่ระบบอีกครั้ง');
       return;
@@ -444,6 +457,7 @@ const NAV = [
   ]},
   {sec:'', items:[
     {id:'settings', label:'ตั้งค่าบริษัท', ic:'&#9881;'},
+    {id:'users', label:'ผู้ใช้งาน', ic:'&#9787;', adminOnly:true},
   ]},
 ];
 
@@ -459,14 +473,15 @@ function render(){
       </div>
       ${NAV.map(sec=>`
         ${sec.sec ? `<div class="nav-section-label">${sec.sec}</div>` : '<div style="height:8px"></div>'}
-        ${sec.items.map(it=>`
+        ${sec.items.filter(it=>!it.adminOnly || currentRole==='admin').map(it=>`
           <div class="navitem ${currentView===it.id?'active':''}" data-nav="${it.id}">
             <span class="ic">${it.ic}</span> ${it.label}
           </div>
         `).join('')}
       `).join('')}
       <div style="margin-top:auto; padding:16px 20px 0; border-top:1px solid rgba(255,255,255,0.12); font-size:12px; color:#9FB3C8;">
-        ${currentUser ? `<div style="word-break:break-all; margin-bottom:6px;">${esc(currentUser)}</div>` : ''}
+        ${currentUser ? `<div style="word-break:break-all; margin-bottom:2px;">${esc(currentUser)}</div>` : ''}
+        ${currentRole ? `<div style="margin-bottom:8px; color:#C7D2E0;">สิทธิ์: ${ROLE_LABELS[currentRole]||currentRole}</div>` : ''}
         <a href="/cdn-cgi/access/logout" style="color:#fff; text-decoration:underline;">ออกจากระบบ</a>
       </div>
     </div>
@@ -488,6 +503,7 @@ function renderView(){
     case 'transactions': return viewTransactions();
     case 'tax': return viewTax();
     case 'settings': return viewSettings();
+    case 'users': return currentRole==='admin' ? viewUsers() : viewDashboard();
     default: return viewDashboard();
   }
 }
@@ -1238,6 +1254,75 @@ function renderExpenseByCategory(txYear){
 }
 
 /* ============================= SETTINGS ============================= */
+/* ============================= USERS (admin) ============================= */
+let usersList = null; // null = not loaded yet
+let usersError = '';
+
+async function loadUsers(){
+  try{
+    const res = await fetch('/api/users', {credentials:'same-origin'});
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || res.status);
+    usersList = data.users; usersError = '';
+  }catch(e){ usersList = []; usersError = 'โหลดรายชื่อผู้ใช้ไม่สำเร็จ'; }
+  if(currentView==='users') render();
+}
+
+async function usersRequest(method, url, body){
+  const res = await fetch(url, {
+    method, credentials:'same-origin',
+    headers: body ? {'Content-Type':'application/json'} : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok){ showToast(data.error || 'ทำรายการไม่สำเร็จ'); return false; }
+  return true;
+}
+
+function viewUsers(){
+  if(usersList===null){ loadUsers(); return `<div class="pagehead"><div><h1>ผู้ใช้งาน</h1></div></div><div class="card">กำลังโหลด…</div>`; }
+  const roleOptions = sel => ['admin','editor','viewer'].map(r=>`<option value="${r}" ${sel===r?'selected':''}>${ROLE_LABELS[r]}</option>`).join('');
+  return `
+    <div class="pagehead">
+      <div><h1>ผู้ใช้งาน</h1><div class="sub">${usersList.length} คน · เฉพาะอีเมลในรายชื่อนี้เท่านั้นที่เข้าใช้ระบบได้</div></div>
+    </div>
+    ${usersError ? `<div class="note-banner warn">${usersError}</div>` : ''}
+
+    <div class="card" style="max-width:820px;">
+      <h3>เพิ่มผู้ใช้</h3>
+      <div class="formgrid">
+        <div class="field"><label>อีเมล</label><input type="text" inputmode="email" id="u-email" placeholder="name@company.com" autocomplete="off"></div>
+        <div class="field"><label>ชื่อ <span class="opt">(ไม่บังคับ)</span></label><input type="text" id="u-name" placeholder="เช่น คุณเอ (Founder)"></div>
+        <div class="field"><label>สิทธิ์</label><select id="u-role">${roleOptions('editor')}</select></div>
+        <div class="field" style="justify-content:flex-end;"><label>&nbsp;</label><button class="btn btn-primary" data-action="add-user">+ เพิ่มผู้ใช้</button></div>
+      </div>
+      <div style="color:var(--muted); font-size:12.5px; margin-top:10px; line-height:1.7;">
+        ${['admin','editor','viewer'].map(r=>`<b>${ROLE_LABELS[r]}</b>: ${ROLE_HINTS[r]}`).join('<br>')}<br>
+        เมื่อเพิ่มแล้ว ส่งลิงก์ <b>${esc(location.origin)}</b> ให้ผู้ใช้ เขาจะได้รับรหัส OTP ทางอีเมลตอนเข้าสู่ระบบ
+      </div>
+    </div>
+
+    <div class="card" style="padding:0; max-width:820px;">
+      <table>
+        <thead><tr><th>ผู้ใช้</th><th>สิทธิ์</th><th>เข้าใช้ล่าสุด</th><th></th></tr></thead>
+        <tbody>
+        ${usersList.length===0 ? `<tr class="empty-row"><td colspan="4">ยังไม่มีผู้ใช้</td></tr>` :
+          usersList.map(u=>{
+            const me = u.email===currentUser;
+            return `<tr class="rowhover">
+              <td><b>${esc(u.name||u.email)}</b>${me?' <span class="badge badge-sent">คุณ</span>':''}<br><span style="color:var(--muted); font-size:12.5px;">${esc(u.email)}</span></td>
+              <td>${me ? `<span class="badge badge-approved">${ROLE_LABELS[u.role]}</span>`
+                : `<select data-action="user-role" data-email="${escAttr(u.email)}" data-name="${escAttr(u.name||'')}" style="width:auto; padding:4px 6px; font-size:12.5px;">${roleOptions(u.role)}</select>`}</td>
+              <td style="color:var(--muted); font-size:12.5px;">${u.last_seen_at ? thaiDate(u.last_seen_at.slice(0,10)) : 'ยังไม่เคยเข้า'}</td>
+              <td style="text-align:right;">${me ? '' : `<button class="btn btn-danger btn-sm" data-action="remove-user" data-email="${escAttr(u.email)}">ลบ</button>`}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function viewSettings(){
   const s = state.settings;
   return `
@@ -1571,7 +1656,7 @@ function escAttr(str){ return esc(str); }
 /* ============================= EVENTS ============================= */
 function bindEvents(){
   document.querySelectorAll('[data-nav]').forEach(el=>{
-    el.addEventListener('click', ()=>{ currentView = el.dataset.nav; render(); });
+    el.addEventListener('click', ()=>{ currentView = el.dataset.nav; if(currentView==='users') usersList=null; render(); });
   });
 
   // Generic click handler via delegation on #app to keep it simple & robust
@@ -1583,6 +1668,20 @@ function bindEvents(){
     const action = t.dataset.action;
 
     if(action==='dash-period'){ dashFilter.period = t.dataset.period; render(); return; }
+    if(action==='add-user'){
+      const email = document.getElementById('u-email').value.trim();
+      const name = document.getElementById('u-name').value.trim();
+      const role = document.getElementById('u-role').value;
+      if(!email){ showToast('กรุณากรอกอีเมล'); return; }
+      if(usersList && usersList.some(u=>u.email===email.toLowerCase())){ showToast('อีเมลนี้มีอยู่แล้ว เปลี่ยนสิทธิ์ได้จากตารางด้านล่าง'); return; }
+      if(await usersRequest('POST','/api/users',{email, name, role})){ showToast('เพิ่มผู้ใช้แล้ว'); usersList=null; render(); }
+      return;
+    }
+    if(action==='remove-user'){
+      if(!confirm(`ลบสิทธิ์การเข้าใช้งานของ ${t.dataset.email} หรือไม่?`)) return;
+      if(await usersRequest('DELETE','/api/users?email='+encodeURIComponent(t.dataset.email))){ showToast('ลบผู้ใช้แล้ว'); usersList=null; render(); }
+      return;
+    }
 
     if(action==='close-modal'){ modal=null; render(); return; }
 
@@ -1827,6 +1926,11 @@ function bindEvents(){
     if(!t) return;
     const action = t.dataset.action;
 
+    if(action==='user-role'){
+      if(await usersRequest('POST','/api/users',{email:t.dataset.email, name:t.dataset.name, role:t.value})) showToast('เปลี่ยนสิทธิ์แล้ว');
+      usersList=null; render();
+      return;
+    }
     if(action==='qt-status'){
       const q = state.quotations.find(q=>q.id===t.dataset.id);
       q.status = t.value; await saveState(); render(); showToast('อัปเดตสถานะแล้ว');

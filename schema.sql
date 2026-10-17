@@ -9,3 +9,17 @@ CREATE TABLE IF NOT EXISTS state_versions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_state_versions_saved_at ON state_versions (saved_at);
+
+-- Who may use the app, and what they may do. Managed from the app's "ผู้ใช้งาน" page.
+--   admin  : everything, including managing users
+--   editor : read and save documents
+--   viewer : read only
+CREATE TABLE IF NOT EXISTS users (
+  email         TEXT PRIMARY KEY,           -- lower-case
+  name          TEXT NOT NULL DEFAULT '',
+  role          TEXT NOT NULL CHECK (role IN ('admin', 'editor', 'viewer')),
+  active        INTEGER NOT NULL DEFAULT 1,
+  added_by      TEXT NOT NULL,
+  added_at      TEXT NOT NULL,
+  last_seen_at  TEXT
+);
