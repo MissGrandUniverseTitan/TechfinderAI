@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Techfinder Accounting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B2A4A;
+    --navy-light:#2A3E63;
+    --teal:#2E7D6E;
+    --teal-light:#E6F1EF;
+    --amber:#B45309;
+    --amber-light:#FEF3E2;
+    --red:#B42318;
+    --red-light:#FEECEC;
+    --bg:#F5F6F8;
+    --card:#FFFFFF;
+    --border:#E3E6EB;
+    --text:#1B222E;
+    --muted:#6B7280;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:'Sarabun',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    font-size:15px;
+    line-height:1.5;
+  }
+  #app{display:flex; min-height:100vh;}
+
+  /* Sidebar */
+  .sidebar{
+    width:230px; flex-shrink:0; background:var(--navy); color:#fff;
+    display:flex; flex-direction:column; padding:20px 0;
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+  }
+  .brand{ padding:0 20px 20px 20px; border-bottom:1px solid rgba(255,255,255,0.12); margin-bottom:14px;}
+  .brand .name{font-weight:700; font-size:19px; letter-spacing:0.5px;}
+  .brand .tag{font-size:11px; color:#9FB3C8; margin-top:2px; font-style:italic;}
+  .navitem{
+    display:flex; align-items:center; gap:10px; padding:11px 20px; cursor:pointer;
+    color:#C7D2E0; font-size:14.5px; font-weight:500; border-left:3px solid transparent;
+    transition:background .12s;
+  }
+  .navitem:hover{background:rgba(255,255,255,0.06); color:#fff;}
+  .navitem.active{background:rgba(255,255,255,0.09); color:#fff; border-left-color:var(--teal);}
+  .navitem .ic{width:18px; text-align:center; font-size:15px;}
+  .nav-section-label{font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em; color:#7488A0; padding:14px 20px 6px;}
+
+  /* Main */
+  .main{flex:1; min-width:0; padding:26px 32px 60px;}
+  .pagehead{display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px;}
+  .pagehead h1{font-size:22px; margin:0; color:var(--navy); font-weight:700;}
+  .pagehead .sub{color:var(--muted); font-size:13.5px; margin-top:2px;}
+
+  .btn{
+    display:inline-flex; align-items:center; gap:6px; border:none; border-radius:8px;
+    padding:9px 16px; font-family:'Sarabun',sans-serif; font-size:14px; font-weight:600;
+    cursor:pointer; transition:filter .12s, transform .05s;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-primary{background:var(--navy); color:#fff;}
+  .btn-primary:hover{filter:brightness(1.15);}
+  .btn-teal{background:var(--teal); color:#fff;}
+  .btn-teal:hover{filter:brightness(1.1);}
+  .btn-ghost{background:#fff; color:var(--navy); border:1px solid var(--border);}
+  .btn-ghost:hover{background:#F0F2F5;}
+  .btn-danger{background:var(--red-light); color:var(--red);}
+  .btn-danger:hover{filter:brightness(0.97);}
+  .btn-sm{padding:6px 11px; font-size:12.5px; border-radius:6px;}
+  .btn:disabled{opacity:.45; cursor:not-allowed;}
+
+  .card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:18px;}
+  .card h3{margin:0 0 14px; font-size:15.5px; color:var(--navy); font-weight:700;}
+
+  .grid-cards{display:grid; grid-template-columns:repeat(auto-fit, minmax(210px,1fr)); gap:14px; margin-bottom:22px;}
+  .stat{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 20px;}
+  .stat .label{font-size:12.5px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.03em;}
+  .stat .val{font-size:25px; font-weight:700; color:var(--navy); margin-top:6px; font-family:'JetBrains Mono',monospace;}
+  .stat .val.teal{color:var(--teal);}
+  .stat .val.amber{color:var(--amber);}
+  .stat .hint{font-size:12px; color:var(--muted); margin-top:4px;}
+
+  table{width:100%; border-collapse:collapse; font-size:14px;}
+  th{
+    text-align:left; background:var(--navy); color:#fff; font-weight:600; font-size:12.5px;
+    padding:10px 12px; text-transform:uppercase; letter-spacing:.02em;
+  }
+  th.num, td.num{text-align:right; font-family:'JetBrains Mono',monospace;}
+  td{padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr.rowhover:hover{background:#FAFBFC;}
+  .empty-row td{text-align:center; color:var(--muted); padding:34px; font-size:14px;}
+
+  .badge{display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;}
+  .badge-draft{background:#EEF0F3; color:#556; }
+  .badge-sent{background:#E8EEFB; color:#2952A3;}
+  .badge-approved{background:var(--teal-light); color:var(--teal);}
+  .badge-rejected{background:var(--red-light); color:var(--red);}
+  .badge-yes{background:var(--teal-light); color:var(--teal);}
+  .badge-no{background:var(--amber-light); color:var(--amber);}
+
+  .formgrid{display:grid; grid-template-columns:1fr 1fr; gap:14px 18px;}
+  .formgrid.single{grid-template-columns:1fr;}
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field label{font-size:12.5px; font-weight:600; color:var(--navy);}
+  .field .opt{color:var(--muted); font-weight:400;}
+  input[type=text], input[type=number], input[type=date], select, textarea{
+    font-family:'Sarabun',sans-serif; font-size:14px; padding:8px 10px; border:1px solid var(--border);
+    border-radius:8px; background:#fff; color:var(--text); width:100%;
+  }
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--teal); outline-offset:0; border-color:var(--teal);}
+  textarea{resize:vertical; min-height:60px;}
+
+  .itemrow{display:grid; grid-template-columns:1fr 80px 130px 130px 34px; gap:8px; align-items:center; margin-bottom:8px;}
+  .itemrow.recv{grid-template-columns:1fr 140px 34px;}
+  .itemrow.annual{grid-template-columns:1fr 64px 110px 74px 120px 34px;}
+  .itemrow-head{font-size:11.5px; color:var(--muted); font-weight:700; text-transform:uppercase;}
+  .iconbtn{
+    width:30px; height:30px; border-radius:7px; border:1px solid var(--border); background:#fff;
+    cursor:pointer; font-size:15px; color:var(--muted); display:flex; align-items:center; justify-content:center;
+  }
+  .iconbtn:hover{background:var(--red-light); color:var(--red); border-color:var(--red-light);}
+  .addrow-btn{margin-top:4px;}
+
+  .totals-box{margin-top:10px; padding-top:12px; border-top:1px dashed var(--border);}
+  .totals-row{display:flex; justify-content:space-between; padding:5px 0; font-size:14px;}
+  .totals-row.grand{font-weight:700; font-size:17px; color:var(--navy); border-top:1px solid var(--border); margin-top:6px; padding-top:10px;}
+  .totals-row .lbl{color:var(--muted);}
+  .totals-row.grand .lbl{color:var(--navy);}
+
+  .toolbar{display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap;}
+  .toolbar input, .toolbar select{width:auto; min-width:150px;}
+  .spacer{flex:1;}
+
+  .modal-backdrop{position:fixed; inset:0; background:rgba(15,20,30,0.45); display:flex; align-items:flex-start; justify-content:center; padding:40px 16px; overflow-y:auto; z-index:50;}
+  .modal{background:#fff; border-radius:14px; width:100%; max-width:640px; padding:26px 28px; box-shadow:0 20px 60px rgba(0,0,0,.25);}
+  .modal h2{margin:0 0 4px; font-size:18px; color:var(--navy);}
+  .modal .modal-sub{color:var(--muted); font-size:13px; margin-bottom:18px;}
+  .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:22px; padding-top:16px; border-top:1px solid var(--border);}
+
+  .toast{position:fixed; bottom:24px; right:24px; background:var(--navy); color:#fff; padding:12px 18px; border-radius:9px; font-size:14px; font-weight:600; box-shadow:0 10px 30px rgba(0,0,0,.25); z-index:100; animation:toastin .2s ease;}
+  @keyframes toastin{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
+
+  .note-banner{background:var(--teal-light); border:1px solid #C8E4DF; color:#1F5C50; padding:12px 16px; border-radius:9px; font-size:13.5px; margin-bottom:18px; display:flex; gap:10px; align-items:flex-start;}
+  .note-banner.warn{background:var(--amber-light); border-color:#F3DCB0; color:#7A4A0A;}
+
+  .empty-state{text-align:center; padding:60px 20px; color:var(--muted);}
+  .empty-state .big{font-size:38px; margin-bottom:10px;}
+  .empty-state .t{font-size:15px; font-weight:600; color:var(--navy); margin-bottom:4px;}
+
+  .link-btn{background:none; border:none; color:var(--teal); font-weight:600; cursor:pointer; font-family:'Sarabun',sans-serif; font-size:13.5px; padding:0;}
+  .link-btn:hover{text-decoration:underline;}
+
+  .print-only{display:none;}
+  @media print{
+    .sidebar, .pagehead .actions, .toolbar, .no-print{display:none !important;}
+    .main{padding:0;}
+    body{background:#fff;}
+    .print-only{display:block;}
+    .print-doc{max-width:800px; margin:0 auto;}
+  }
+
+  ::-webkit-scrollbar{width:9px; height:9px;}
+  ::-webkit-scrollbar-thumb{background:#c7cdd6; border-radius:6px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============================= STATE ============================= */
+const STORAGE_KEY = 'appdata';
+const LOGO_DATA_URI = 'data:image/png;base64,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';
+
+function defaultState(){
+  return {
+    settings:{
+      companyName:'บริษัท เทคไฟน์เดอร์ จำกัด',
+      taxId:'0105569088252',
+      address:'59/15 หมู่บ้านไทม์โฮมร่มเย็น ซอยเฉลิมพระเกียรติ ร.9 ซอย 38 แยก 1 ถนนเฉลิมพระเกียรติ ร.9 ซอย 38 แขวงหนองบอน เขตประเวศ กรุงเทพมหานคร',
+      phone:'093-371-1991 หรือ 090-939-9209',
+      email:'sales@techfinder.one',
+      website:'',
+      signatoryName:'',
+      vatRegistered:false,
+      defaultWhtRate:3,
+      bankName:'ธนาคารกสิกรไทย',
+      bankBranch:'สาขาพาราไดซ์ พาร์ค',
+      bankAccountType:'ออมทรัพย์',
+      bankAccountNo:'234-3-36281-4',
+      bankAccountName:'บจก. เทคไฟน์เดอร์'
+    },
+    clients:[],
+    quotations:[],
+    receipts:[],
+    transactions:[],
+    counters:{qt:1, rc:1},
+    _seed:false
+  };
+}
+
+let state = null;
+let currentView = 'dashboard';
+let modal = null; // {type, payload}
+let toastMsg = null;
+let toastTimer = null;
+let currentUser = null; // email of the logged-in user, from /api/data
+
+// Throws on any failure, so a network error or expired login never
+// starts the app with an empty state that the next save would write over real data.
+async function loadState(){
+  const res = await fetch('/api/data', { credentials: 'same-origin' });
+  if(!res.ok) throw new Error('load failed with status ' + res.status);
+  const data = await res.json();
+  currentUser = data.user || null;
+  if(data.value){
+    const parsed = JSON.parse(data.value);
+    const base = defaultState();
+    return Object.assign(base, parsed, {settings: Object.assign(base.settings, parsed.settings)});
+  }
+  return defaultState();
+}
+
+async function saveState(){
+  try{
+    const res = await fetch('/api/data', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: JSON.stringify(state) })
+    });
+    if(res.status===401 || res.status===403){
+      showToast('เซสชันหมดอายุ กรุณาโหลดหน้าใหม่เพื่อเข้าสู่ระบบอีกครั้ง');
+      return;
+    }
+    if(!res.ok) throw new Error('save failed with status ' + res.status);
+  }catch(e){
+    console.error('Storage save failed', e);
+    showToast('บันทึกไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตหรือเข้าสู่ระบบใหม่ แล้วลองอีกครั้ง');
+  }
+}
+
+function seedIfEmpty(){
+  if(state.clients.length===0){
+    state.clients.push({
+      id:uid('cl'), name:'บริษัท กิระ เทรดดิ้ง จำกัด', taxId:'', address:'', contact:'Mook', phone:'', email:''
+    });
+  }
+}
+
+/* ============================= HELPERS ============================= */
+function uid(prefix){ return prefix+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function fmt(n){
+  n = Number(n)||0;
+  return n.toLocaleString('th-TH',{minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function thaiDate(iso){
+  if(!iso) return '-';
+  const d = new Date(iso+'T00:00:00');
+  const months=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()+543}`;
+}
+function nextQtNo(){
+  // QT-TFD-<วันที่+เวลาขณะออกเลข ตามเวลาไทย GMT+7> ไม่ผูกกับ timezone ของเครื่อง/เบราว์เซอร์ผู้ใช้
+  const bkk = new Date(Date.now() + 7*60*60000);
+  const pad = n => String(n).padStart(2,'0');
+  const y = bkk.getUTCFullYear();
+  const m = pad(bkk.getUTCMonth()+1);
+  const d = pad(bkk.getUTCDate());
+  const hh = pad(bkk.getUTCHours());
+  const mm = pad(bkk.getUTCMinutes());
+  const ss = pad(bkk.getUTCSeconds());
+  return `QT-TFD-${y}${m}${d}${hh}${mm}${ss}`;
+}
+function nextRcNo(){
+  const year = new Date().getFullYear()+543;
+  const n = String(state.counters.rc).padStart(3,'0');
+  return `RC-${year}-${n}`;
+}
+function clientName(id){
+  const c = state.clients.find(c=>c.id===id);
+  return c ? c.name : '(ไม่พบลูกค้า)';
+}
+function qtRowTotal(it){
+  const months = it.months===undefined ? 1 : (Number(it.months)||0);
+  return (Number(it.qty)||0)*(Number(it.unitPrice)||0)*months;
+}
+function qtTotal(qt){
+  const sum = list => (list||[]).reduce((s,i)=>s+qtRowTotal(i), 0);
+  return {one: sum(qt.oneTimeItems), rec: sum(qt.recurringItems), ann: sum(qt.annualItems)};
+}
+function newQtItem(list){
+  return list==='annualItems' ? {desc:'', qty:1, unitPrice:0, months:12} : {desc:'', qty:1, unitPrice:0};
+}
+function qtGrossActive(qt){
+  const t = qtTotal(qt);
+  if(qt.qtType==='recurring') return t.rec;
+  if(qt.qtType==='annual') return t.ann;
+  return t.one;
+}
+function qtWht(qt){ return qt.whtEnabled ? qtGrossActive(qt) * (Number(qt.whtRate)||0)/100 : 0; }
+function qtNet(qt){ return qtGrossActive(qt) - qtWht(qt); }
+function rcGross(rc){ return (rc.items||[]).reduce((s,i)=>s+(Number(i.amount)||0),0); }
+function rcWht(rc){ return rc.whtEnabled ? rcGross(rc) * (Number(rc.whtRate)||0)/100 : 0; }
+function rcNet(rc){ return rcGross(rc) - rcWht(rc); }
+
+/* WHT income-type presets for outgoing payments (Techfinder as payer / withholding agent) */
+const WHT_INCOME_TYPES = [
+  {code:'40_2', label:'มาตรา 40(2) ค่าจ้างทำของ/ค่าบริการทั่วไป', rate:3},
+  {code:'40_6', label:'มาตรา 40(6) วิชาชีพอิสระ (กฎหมาย/บัญชี/วิศวกรรม/สถาปัตย์/ประณีตศิลป์/เวชกรรม)', rate:3},
+  {code:'40_3', label:'มาตรา 40(3) ค่าลิขสิทธิ์', rate:3},
+  {code:'40_5', label:'มาตรา 40(5) ค่าเช่าทรัพย์สิน', rate:5},
+  {code:'other', label:'อื่นๆ (ระบุอัตราเอง)', rate:0},
+];
+function txWht(t){ return t.whtEnabled ? (Number(t.amount)||0) * (Number(t.whtRate)||0)/100 : 0; }
+function txVat(t){ return t.vatEnabled ? (Number(t.amount)||0) * (Number(t.vatRate)||0)/100 : 0; }
+function txInvoiceTotal(t){ return (Number(t.amount)||0) + txVat(t); }
+function txNetPaid(t){ return txInvoiceTotal(t) - txWht(t); }
+function nextWhtCertNo(){
+  const bkk = new Date(Date.now() + 7*60*60000);
+  const pad = n => String(n).padStart(2,'0');
+  return `WHT-TFD-${bkk.getUTCFullYear()}${pad(bkk.getUTCMonth()+1)}${pad(bkk.getUTCDate())}${pad(bkk.getUTCHours())}${pad(bkk.getUTCMinutes())}${pad(bkk.getUTCSeconds())}`;
+}
+
+function showToast(msg){
+  toastMsg = msg;
+  render();
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ toastMsg=null; render(); }, 2600);
+}
+
+function yearOf(iso){ return iso ? Number(iso.slice(0,4)) : new Date().getFullYear(); }
+
+function allYears(){
+  const ys = new Set();
+  state.receipts.forEach(r=>ys.add(yearOf(r.date)));
+  state.transactions.forEach(t=>ys.add(yearOf(t.date)));
+  ys.add(new Date().getFullYear());
+  return Array.from(ys).sort((a,b)=>b-a);
+}
+
+/* ============================= MUTATIONS ============================= */
+function addTransactionFromReceipt(rc){
+  state.transactions.push({
+    id:uid('tx'), date:rc.date, type:'income', category:'รายได้ค่าบริการ',
+    description:`รับชำระตามใบเสร็จ ${rc.receiptNo} (${clientName(rc.clientId)})`,
+    amount: rcGross(rc), relatedReceiptId: rc.id
+  });
+}
+function removeTransactionsForReceipt(rcId){
+  state.transactions = state.transactions.filter(t=>t.relatedReceiptId!==rcId);
+}
+
+/* ============================= RENDER SHELL ============================= */
+const NAV = [
+  {sec:'ภาพรวม', items:[
+    {id:'dashboard', label:'แดชบอร์ด', ic:'&#9679;'},
+  ]},
+  {sec:'เอกสารขาย', items:[
+    {id:'clients', label:'ลูกค้า', ic:'&#9737;'},
+    {id:'quotations', label:'ใบเสนอราคา', ic:'&#9998;'},
+    {id:'receipts', label:'ใบเสร็จรับเงิน', ic:'&#10003;'},
+  ]},
+  {sec:'บัญชี', items:[
+    {id:'transactions', label:'รายรับ-รายจ่าย', ic:'&#8942;'},
+    {id:'tax', label:'สรุปภาษี', ic:'&#9873;'},
+  ]},
+  {sec:'', items:[
+    {id:'settings', label:'ตั้งค่าบริษัท', ic:'&#9881;'},
+  ]},
+];
+
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="sidebar no-print">
+      <div class="brand">
+        <img src="${LOGO_DATA_URI}" alt="Techfinder" style="width:36px; height:36px; border-radius:8px; display:block; margin-bottom:8px;">
+        <div class="name">TECHFINDER</div>
+        <div class="tag">Accounting Console</div>
+      </div>
+      ${NAV.map(sec=>`
+        ${sec.sec ? `<div class="nav-section-label">${sec.sec}</div>` : '<div style="height:8px"></div>'}
+        ${sec.items.map(it=>`
+          <div class="navitem ${currentView===it.id?'active':''}" data-nav="${it.id}">
+            <span class="ic">${it.ic}</span> ${it.label}
+          </div>
+        `).join('')}
+      `).join('')}
+      <div style="margin-top:auto; padding:16px 20px 0; border-top:1px solid rgba(255,255,255,0.12); font-size:12px; color:#9FB3C8;">
+        ${currentUser ? `<div style="word-break:break-all; margin-bottom:6px;">${esc(currentUser)}</div>` : ''}
+        <a href="/cdn-cgi/access/logout" style="color:#fff; text-decoration:underline;">ออกจากระบบ</a>
+      </div>
+    </div>
+    <div class="main">
+      ${renderView()}
+    </div>
+    ${modal ? renderModal() : ''}
+    ${toastMsg ? `<div class="toast">${toastMsg}</div>` : ''}
+  `;
+  bindEvents();
+}
+
+function renderView(){
+  switch(currentView){
+    case 'dashboard': return viewDashboard();
+    case 'clients': return viewClients();
+    case 'quotations': return viewQuotations();
+    case 'receipts': return viewReceipts();
+    case 'transactions': return viewTransactions();
+    case 'tax': return viewTax();
+    case 'settings': return viewSettings();
+    default: return viewDashboard();
+  }
+}
+
+/* ============================= DASHBOARD ============================= */
+function viewDashboard(){
+  const year = new Date().getFullYear();
+  const incomeYtd = state.transactions.filter(t=>t.type==='income' && yearOf(t.date)===year).reduce((s,t)=>s+Number(t.amount||0),0);
+  const expenseYtd = state.transactions.filter(t=>t.type==='expense' && yearOf(t.date)===year).reduce((s,t)=>s+txInvoiceTotal(t),0);
+  const whtCreditYtd = state.receipts.filter(r=>yearOf(r.date)===year).reduce((s,r)=>s+rcWht(r),0);
+  const pendingCerts = state.receipts.filter(r=>r.whtEnabled && !r.whtCertReceived).length;
+  const openQt = state.quotations.filter(q=>q.status==='sent' || q.status==='draft').length;
+
+  const recentQt = [...state.quotations].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,5);
+  const recentRc = [...state.receipts].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,5);
+
+  return `
+    <div class="pagehead">
+      <div><h1>แดชบอร์ด</h1><div class="sub">ภาพรวมปี ${year+543}</div></div>
+    </div>
+
+    ${pendingCerts>0 ? `<div class="note-banner warn">⚠ มีใบเสร็จที่หัก ณ ที่จ่ายแล้ว แต่ยังไม่ได้รับหนังสือรับรอง 50 ทวิ อยู่ ${pendingCerts} ใบ — <button class="link-btn" data-nav="tax">ไปดูที่สรุปภาษี</button></div>` : ''}
+
+    <div class="grid-cards">
+      <div class="stat"><div class="label">รายรับปีนี้</div><div class="val teal">${fmt(incomeYtd)}</div><div class="hint">บาท (ยอดเต็มก่อนหัก ณ ที่จ่าย)</div></div>
+      <div class="stat"><div class="label">รายจ่ายปีนี้</div><div class="val">${fmt(expenseYtd)}</div><div class="hint">บาท</div></div>
+      <div class="stat"><div class="label">เครดิตภาษีหัก ณ ที่จ่าย</div><div class="val amber">${fmt(whtCreditYtd)}</div><div class="hint">สะสมปีนี้ (ต้องมี 50 ทวิ ครบ)</div></div>
+      <div class="stat"><div class="label">ใบเสนอราคาที่ยังเปิดอยู่</div><div class="val">${openQt}</div><div class="hint">ฉบับ (ร่าง/ส่งแล้ว รออนุมัติ)</div></div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+      <div class="card">
+        <h3>ใบเสนอราคาล่าสุด</h3>
+        ${recentQt.length===0 ? `<div class="empty-state" style="padding:24px;"><div class="t">ยังไม่มีใบเสนอราคา</div></div>` : `
+        <table><tbody>
+        ${recentQt.map(q=>{
+          const t = qtTotal(q);
+          return `<tr class="rowhover"><td><b>${q.qtNo}</b><br><span style="color:var(--muted); font-size:12.5px;">${clientName(q.clientId)}</span></td>
+          <td class="num">${fmt(t.one+t.rec+t.ann)}</td>
+          <td>${statusBadge(q.status)}</td></tr>`;
+        }).join('')}
+        </tbody></table>`}
+      </div>
+      <div class="card">
+        <h3>ใบเสร็จล่าสุด</h3>
+        ${recentRc.length===0 ? `<div class="empty-state" style="padding:24px;"><div class="t">ยังไม่มีใบเสร็จ</div></div>` : `
+        <table><tbody>
+        ${recentRc.map(r=>`<tr class="rowhover"><td><b>${r.receiptNo}</b><br><span style="color:var(--muted); font-size:12.5px;">${clientName(r.clientId)}</span></td>
+          <td class="num">${fmt(rcNet(r))}</td>
+          <td>${r.whtEnabled ? (r.whtCertReceived?'<span class="badge badge-yes">มี 50 ทวิ</span>':'<span class="badge badge-no">รอ 50 ทวิ</span>') : '<span class="badge badge-draft">ไม่มี WHT</span>'}</td></tr>`).join('')}
+        </tbody></table>`}
+      </div>
+    </div>
+  `;
+}
+
+function statusBadge(s){
+  const map = {draft:['ร่าง','badge-draft'], sent:['ส่งแล้ว','badge-sent'], approved:['อนุมัติแล้ว','badge-approved'], rejected:['ปฏิเสธ','badge-rejected']};
+  const v = map[s] || map.draft;
+  return `<span class="badge ${v[1]}">${v[0]}</span>`;
+}
+
+/* ============================= CLIENTS ============================= */
+function viewClients(){
+  return `
+    <div class="pagehead">
+      <div><h1>ลูกค้า</h1><div class="sub">${state.clients.length} ราย</div></div>
+      <div class="actions"><button class="btn btn-primary" data-action="new-client">+ เพิ่มลูกค้า</button></div>
+    </div>
+    <div class="card" style="padding:0;">
+      <table>
+        <thead><tr><th>ชื่อบริษัท</th><th>เลขผู้เสียภาษี</th><th>ผู้ติดต่อ</th><th>เบอร์โทร/อีเมล</th><th></th></tr></thead>
+        <tbody>
+        ${state.clients.length===0 ? `<tr class="empty-row"><td colspan="5">ยังไม่มีข้อมูลลูกค้า — กด "+ เพิ่มลูกค้า" เพื่อเริ่มต้น</td></tr>` :
+          state.clients.map(c=>`
+          <tr class="rowhover">
+            <td><b>${esc(c.name)}</b><br><span style="color:var(--muted); font-size:12.5px;">${esc(c.address||'')}</span></td>
+            <td>${esc(c.taxId||'-')}</td>
+            <td>${esc(c.contact||'-')}</td>
+            <td>${esc(c.phone||'-')}${c.email?'<br>'+esc(c.email):''}</td>
+            <td style="white-space:nowrap;">
+              <button class="btn btn-ghost btn-sm" data-action="edit-client" data-id="${c.id}">แก้ไข</button>
+              <button class="btn btn-danger btn-sm" data-action="delete-client" data-id="${c.id}">ลบ</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function clientModal(existing){
+  const c = existing || {id:null, name:'', taxId:'', address:'', contact:'', phone:'', email:''};
+  return `
+    <h2>${existing?'แก้ไขข้อมูลลูกค้า':'เพิ่มลูกค้าใหม่'}</h2>
+    <div class="modal-sub">ข้อมูลนี้จะถูกใช้อ้างอิงในใบเสนอราคาและใบเสร็จ</div>
+    <div class="formgrid single">
+      <div class="field"><label>ชื่อบริษัท / นิติบุคคล</label><input type="text" id="f-name" value="${escAttr(c.name)}" placeholder="เช่น บริษัท กิระ เทรดดิ้ง จำกัด"></div>
+      <div class="formgrid">
+        <div class="field"><label>เลขประจำตัวผู้เสียภาษี <span class="opt">(ถ้ามี)</span></label><input type="text" id="f-taxid" value="${escAttr(c.taxId)}"></div>
+        <div class="field"><label>ผู้ติดต่อ</label><input type="text" id="f-contact" value="${escAttr(c.contact)}"></div>
+      </div>
+      <div class="field"><label>ที่อยู่</label><textarea id="f-address">${esc(c.address)}</textarea></div>
+      <div class="formgrid">
+        <div class="field"><label>เบอร์โทร</label><input type="text" id="f-phone" value="${escAttr(c.phone)}"></div>
+        <div class="field"><label>อีเมล</label><input type="text" id="f-email" value="${escAttr(c.email)}"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-action="close-modal">ยกเลิก</button>
+      <button class="btn btn-primary" data-action="save-client" data-id="${c.id||''}">บันทึก</button>
+    </div>
+  `;
+}
+
+/* ============================= QUOTATIONS ============================= */
+let qtForm = null;
+
+function viewQuotations(){
+  const list = [...state.quotations].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  return `
+    <div class="pagehead">
+      <div><h1>ใบเสนอราคา</h1><div class="sub">${list.length} ฉบับ</div></div>
+      <div class="actions"><button class="btn btn-primary" data-action="new-qt">+ สร้างใบเสนอราคา</button></div>
+    </div>
+    <div class="card" style="padding:0;">
+      <table>
+        <thead><tr><th>เลขที่</th><th>ลูกค้า</th><th>โครงการ</th><th>ประเภท</th><th class="num">รวม</th><th>สถานะ</th><th></th></tr></thead>
+        <tbody>
+        ${list.length===0 ? `<tr class="empty-row"><td colspan="7">ยังไม่มีใบเสนอราคา</td></tr>` :
+          list.map(q=>{
+            const badge = q.qtType==='recurring' ? '<span class="badge badge-approved">Recurring</span>'
+              : q.qtType==='annual' ? '<span class="badge badge-no">License รายปี</span>'
+              : '<span class="badge badge-sent">One-time</span>';
+            return `<tr class="rowhover">
+              <td><b>${q.qtNo}</b><br><span style="color:var(--muted); font-size:12px;">${thaiDate(q.date)}</span></td>
+              <td>${esc(clientName(q.clientId))}</td>
+              <td>${esc(q.projectName||'-')}</td>
+              <td>${badge}</td>
+              <td class="num">${fmt(qtGrossActive(q))}${q.qtType==='recurring'?' /เดือน':''}${q.whtEnabled?`<br><span style="color:var(--muted); font-size:11.5px; font-weight:400;">สุทธิหลังหัก ${fmt(q.whtRate)}%: ${fmt(qtNet(q))}</span>`:''}</td>
+              <td>
+                <select data-action="qt-status" data-id="${q.id}" style="width:auto; padding:4px 6px; font-size:12.5px;">
+                  <option value="draft" ${q.status==='draft'?'selected':''}>ร่าง</option>
+                  <option value="sent" ${q.status==='sent'?'selected':''}>ส่งแล้ว</option>
+                  <option value="approved" ${q.status==='approved'?'selected':''}>อนุมัติแล้ว</option>
+                  <option value="rejected" ${q.status==='rejected'?'selected':''}>ปฏิเสธ</option>
+                </select>
+              </td>
+              <td style="white-space:nowrap;">
+                <button class="btn btn-ghost btn-sm" data-action="print-qt" data-id="${q.id}">พิมพ์</button>
+                <button class="btn btn-teal btn-sm" data-action="qt-to-receipt" data-id="${q.id}">→ ใบเสร็จ</button>
+                <button class="btn btn-ghost btn-sm" data-action="edit-qt" data-id="${q.id}">แก้ไข</button>
+                <button class="btn btn-danger btn-sm" data-action="delete-qt" data-id="${q.id}">ลบ</button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function newQtForm(existing){
+  if(existing){
+    qtForm = JSON.parse(JSON.stringify(existing));
+    if(!qtForm.qtType) qtForm.qtType = (qtForm.recurringItems||[]).some(i=>i.desc||i.unitPrice) ? 'recurring' : 'one_time';
+  } else {
+    qtForm = {
+      id:null, qtNo:nextQtNo(), date:todayISO(), validDays:30, clientId: state.clients[0]?state.clients[0].id:'',
+      projectName:'', status:'draft', qtType:'one_time',
+      oneTimeItems:[{desc:'', qty:1, unitPrice:0}],
+      recurringItems:[{desc:'', qty:1, unitPrice:0}],
+      annualItems:[{desc:'', qty:1, unitPrice:0, months:12}],
+      whtEnabled:true, whtRate: state.settings.defaultWhtRate||3,
+    };
+  }
+  if(!qtForm.annualItems) qtForm.annualItems = [{desc:'', qty:1, unitPrice:0, months:12}];
+  if(qtForm.whtEnabled===undefined) qtForm.whtEnabled = false;
+  if(qtForm.whtRate===undefined) qtForm.whtRate = state.settings.defaultWhtRate||3;
+}
+
+function qtModal(){
+  const f = qtForm;
+  const type = f.qtType==='recurring' ? 'recurring' : f.qtType==='annual' ? 'annual' : 'one_time';
+  return `
+    <h2 style="max-width:520px;">${f.id?'แก้ไขใบเสนอราคา':'สร้างใบเสนอราคาใหม่'}</h2>
+    <div class="modal-sub">เลขที่ ${f.qtNo}</div>
+    <div class="formgrid">
+      <div class="field"><label>ประเภทใบเสนอราคา</label>
+        <select id="qt-type">
+          <option value="one_time" ${type==='one_time'?'selected':''}>เฉพาะค่าใช้จ่ายครั้งเดียว (One-time)</option>
+          <option value="recurring" ${type==='recurring'?'selected':''}>เฉพาะค่าใช้จ่ายรายเดือน (Recurring)</option>
+          <option value="annual" ${type==='annual'?'selected':''}>ซื้อ License รายปี (ราคา/เดือน × จำนวนเดือน)</option>
+        </select>
+      </div>
+      <div class="field"><label>ลูกค้า</label>
+        <select id="qt-client">
+          ${state.clients.map(c=>`<option value="${c.id}" ${f.clientId===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
+          ${state.clients.length===0?'<option>ยังไม่มีลูกค้า — เพิ่มก่อน</option>':''}
+        </select>
+      </div>
+      <div class="field"><label>วันที่ออกเอกสาร</label><input type="date" id="qt-date" value="${f.date}"></div>
+      <div class="field"><label>ยืนราคา (วัน)</label><input type="number" id="qt-validdays" value="${f.validDays}"></div>
+      <div class="field" style="grid-column:1/-1;"><label>ชื่อโครงการ</label><input type="text" id="qt-project" value="${escAttr(f.projectName)}" placeholder="เช่น GWS Migration Phase 1"></div>
+    </div>
+
+    ${type==='one_time' ? `
+    <div style="margin-top:18px;">
+      <div class="itemrow-head">ค่าใช้จ่ายครั้งเดียว (One-time)</div>
+      <div id="qt-onetime-rows">${f.oneTimeItems.map((it,idx)=>qtItemRow('oneTimeItems', it, idx)).join('')}</div>
+      <button class="btn btn-ghost btn-sm addrow-btn" data-action="qt-add-row" data-list="oneTimeItems">+ เพิ่มรายการ</button>
+    </div>
+    ` : type==='recurring' ? `
+    <div style="margin-top:18px;">
+      <div class="itemrow-head">ค่าใช้จ่ายรายเดือน (Recurring)</div>
+      <div id="qt-recurring-rows">${f.recurringItems.map((it,idx)=>qtItemRow('recurringItems', it, idx)).join('')}</div>
+      <button class="btn btn-ghost btn-sm addrow-btn" data-action="qt-add-row" data-list="recurringItems">+ เพิ่มรายการ</button>
+    </div>
+    ` : `
+    <div style="margin-top:18px;">
+      <div class="itemrow-head">License รายปี</div>
+      <div class="itemrow annual itemrow-head" style="margin:6px 0;"><span>รายละเอียด</span><span>จำนวน</span><span>ราคา/เดือน</span><span>จำนวนเดือน</span><span style="text-align:right;">รวมราคา</span><span></span></div>
+      <div id="qt-annual-rows">${f.annualItems.map((it,idx)=>qtItemRow('annualItems', it, idx)).join('')}</div>
+      <button class="btn btn-ghost btn-sm addrow-btn" data-action="qt-add-row" data-list="annualItems">+ เพิ่มรายการ</button>
+    </div>
+    `}
+
+    <div class="card" style="background:#FAFBFC; margin-top:16px; padding:14px 16px;">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:14px; cursor:pointer;">
+        <input type="checkbox" id="qt-wht-enabled" ${f.whtEnabled?'checked':''}> หักภาษี ณ ที่จ่าย (ประมาณการ)
+      </label>
+      <div style="display:flex; align-items:center; gap:8px; margin-top:10px; ${f.whtEnabled?'':'opacity:.4; pointer-events:none;'}">
+        <span style="font-size:13.5px;">อัตรา</span>
+        <input type="number" id="qt-wht-rate" value="${f.whtRate}" style="width:70px;">
+        <span style="font-size:13.5px;">%</span>
+        <span style="color:var(--muted); font-size:12.5px; margin-left:8px;">(ค่าบริการทั่วไป = 3% ตามปกติ)</span>
+      </div>
+    </div>
+
+    <div class="totals-box">${qtTotalsBoxHtml(f)}</div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-action="close-modal">ยกเลิก</button>
+      <button class="btn btn-primary" data-action="save-qt">บันทึกใบเสนอราคา</button>
+    </div>
+  `;
+}
+function qtTotalsBoxHtml(f){
+  const label = f.qtType==='recurring' ? 'รายเดือน' : f.qtType==='annual' ? 'License รายปี' : 'One-time';
+  const unit = f.qtType==='recurring' ? 'บาท / เดือน' : 'บาท';
+  const gross = qtGrossActive(f), wht = qtWht(f), net = qtNet(f);
+  if(!f.whtEnabled){
+    return `<div class="totals-row grand"><span class="lbl">รวม ${label}</span><span>${fmt(gross)} ${unit}</span></div>`;
+  }
+  return `
+    <div class="totals-row"><span class="lbl">รวม ${label} (ก่อนหัก)</span><span>${fmt(gross)} ${unit}</span></div>
+    <div class="totals-row"><span class="lbl">หัก ณ ที่จ่าย ${fmt(f.whtRate)}%</span><span>- ${fmt(wht)} ${unit}</span></div>
+    <div class="totals-row grand"><span class="lbl">รับสุทธิโดยประมาณ</span><span>${fmt(net)} ${unit}</span></div>
+  `;
+}
+function qtItemRow(list, it, idx){
+  const annual = list==='annualItems';
+  return `
+    <div class="itemrow${annual?' annual':''}" data-list="${list}" data-idx="${idx}">
+      <input type="text" placeholder="รายละเอียด" value="${escAttr(it.desc)}" data-field="desc" data-action="qt-item-input">
+      <input type="number" placeholder="จำนวน" value="${it.qty}" data-field="qty" data-action="qt-item-input">
+      <input type="number" placeholder="${annual?'ราคา/เดือน':'ราคา/หน่วย'}" value="${it.unitPrice}" data-field="unitPrice" data-action="qt-item-input">
+      ${annual?`<input type="number" placeholder="เดือน" value="${it.months}" data-field="months" data-action="qt-item-input">`:''}
+      <div style="font-family:'JetBrains Mono',monospace; text-align:right; font-size:13.5px; color:var(--navy); font-weight:600;">
+        ${fmt(qtRowTotal(it))}
+      </div>
+      <button class="iconbtn" data-action="qt-remove-row" data-list="${list}" data-idx="${idx}">✕</button>
+    </div>
+  `;
+}
+
+/* ============================= RECEIPTS ============================= */
+let rcForm = null;
+
+function viewReceipts(){
+  const list = [...state.receipts].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  return `
+    <div class="pagehead">
+      <div><h1>ใบเสร็จรับเงิน</h1><div class="sub">${list.length} ใบ</div></div>
+      <div class="actions"><button class="btn btn-primary" data-action="new-rc">+ ออกใบเสร็จ</button></div>
+    </div>
+    <div class="card" style="padding:0;">
+      <table>
+        <thead><tr><th>เลขที่</th><th>ลูกค้า</th><th class="num">ยอดเต็ม</th><th class="num">หัก WHT</th><th class="num">รับสุทธิ</th><th>50 ทวิ</th><th></th></tr></thead>
+        <tbody>
+        ${list.length===0 ? `<tr class="empty-row"><td colspan="7">ยังไม่มีใบเสร็จ</td></tr>` :
+          list.map(r=>`
+          <tr class="rowhover">
+            <td><b>${r.receiptNo}</b><br><span style="color:var(--muted); font-size:12px;">${thaiDate(r.date)}</span></td>
+            <td>${esc(clientName(r.clientId))}</td>
+            <td class="num">${fmt(rcGross(r))}</td>
+            <td class="num">${r.whtEnabled? fmt(rcWht(r)) : '-'}</td>
+            <td class="num"><b>${fmt(rcNet(r))}</b></td>
+            <td>
+              ${r.whtEnabled ? `<label style="display:flex; align-items:center; gap:6px; font-size:12.5px; cursor:pointer;">
+                <input type="checkbox" data-action="toggle-wht-cert" data-id="${r.id}" ${r.whtCertReceived?'checked':''}> ${r.whtCertReceived?'ได้รับแล้ว':'รอรับ'}
+              </label>` : '<span style="color:var(--muted); font-size:12.5px;">ไม่มี WHT</span>'}
+            </td>
+            <td style="white-space:nowrap;">
+              <button class="btn btn-ghost btn-sm" data-action="print-rc" data-id="${r.id}">พิมพ์</button>
+              <button class="btn btn-ghost btn-sm" data-action="edit-rc" data-id="${r.id}">แก้ไข</button>
+              <button class="btn btn-danger btn-sm" data-action="delete-rc" data-id="${r.id}">ลบ</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function newRcForm(existing, fromQt){
+  if(existing){
+    rcForm = JSON.parse(JSON.stringify(existing));
+  } else if(fromQt){
+    const t = qtTotal(fromQt);
+    const items = [];
+    if(t.one>0) items.push({desc:`ค่าติดตั้ง (One-time) — อ้างอิง ${fromQt.qtNo}`, amount:t.one});
+    if(t.rec>0) items.push({desc:`ค่าบริการรายเดือน — อ้างอิง ${fromQt.qtNo}`, amount:t.rec});
+    if(t.ann>0) items.push({desc:`ค่า License รายปี — อ้างอิง ${fromQt.qtNo}`, amount:t.ann});
+    rcForm = {
+      id:null, receiptNo:nextRcNo(), date:todayISO(), clientId:fromQt.clientId, refQt:fromQt.qtNo,
+      items: items.length?items:[{desc:'', amount:0}],
+      whtEnabled: fromQt.whtEnabled!==undefined ? fromQt.whtEnabled : true,
+      whtRate: fromQt.whtRate!==undefined ? fromQt.whtRate : (state.settings.defaultWhtRate||3),
+      whtCertReceived:false,
+      paymentMethod:'โอนเงินผ่านธนาคาร', note:''
+    };
+  } else {
+    rcForm = {
+      id:null, receiptNo:nextRcNo(), date:todayISO(), clientId: state.clients[0]?state.clients[0].id:'', refQt:'',
+      items:[{desc:'', amount:0}],
+      whtEnabled:false, whtRate: state.settings.defaultWhtRate||3, whtCertReceived:false,
+      paymentMethod:'โอนเงินผ่านธนาคาร', note:''
+    };
+  }
+}
+
+function rcModal(){
+  const f = rcForm;
+  const gross = rcGross(f), wht = rcWht(f), net = rcNet(f);
+  return `
+    <h2>${f.id?'แก้ไขใบเสร็จ':'ออกใบเสร็จรับเงิน'}</h2>
+    <div class="modal-sub">เลขที่ ${f.receiptNo}</div>
+    <div class="formgrid">
+      <div class="field"><label>ลูกค้า</label>
+        <select id="rc-client">
+          ${state.clients.map(c=>`<option value="${c.id}" ${f.clientId===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>วันที่รับเงิน</label><input type="date" id="rc-date" value="${f.date}"></div>
+      <div class="field"><label>อ้างอิง QT <span class="opt">(ถ้ามี)</span></label><input type="text" id="rc-refqt" value="${escAttr(f.refQt)}"></div>
+      <div class="field"><label>ช่องทางชำระ</label>
+        <select id="rc-method">
+          ${['โอนเงินผ่านธนาคาร','เงินสด','อื่นๆ'].map(m=>`<option ${f.paymentMethod===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <div class="itemrow-head">รายการ</div>
+      <div id="rc-item-rows">${f.items.map((it,idx)=>rcItemRow(it, idx)).join('')}</div>
+      <button class="btn btn-ghost btn-sm addrow-btn" data-action="rc-add-row">+ เพิ่มรายการ</button>
+    </div>
+
+    <div class="card" style="background:#FAFBFC; margin-top:16px; padding:14px 16px;">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:14px; cursor:pointer;">
+        <input type="checkbox" id="rc-wht-enabled" ${f.whtEnabled?'checked':''}> หักภาษี ณ ที่จ่าย
+      </label>
+      <div style="display:flex; align-items:center; gap:8px; margin-top:10px; ${f.whtEnabled?'':'opacity:.4; pointer-events:none;'}">
+        <span style="font-size:13.5px;">อัตรา</span>
+        <input type="number" id="rc-wht-rate" value="${f.whtRate}" style="width:70px;">
+        <span style="font-size:13.5px;">%</span>
+        <span style="color:var(--muted); font-size:12.5px; margin-left:8px;">(ค่าบริการทั่วไป = 3% ตามปกติ)</span>
+      </div>
+    </div>
+
+    <div class="totals-box">
+      <div class="totals-row"><span class="lbl">รวมเป็นเงิน (ก่อนหัก)</span><span>${fmt(gross)} บาท</span></div>
+      <div class="totals-row"><span class="lbl">หัก ณ ที่จ่าย</span><span>- ${fmt(wht)} บาท</span></div>
+      <div class="totals-row grand"><span class="lbl">รับสุทธิ</span><span>${fmt(net)} บาท</span></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-action="close-modal">ยกเลิก</button>
+      <button class="btn btn-primary" data-action="save-rc">บันทึกใบเสร็จ</button>
+    </div>
+  `;
+}
+function rcItemRow(it, idx){
+  return `
+    <div class="itemrow recv" data-idx="${idx}">
+      <input type="text" placeholder="รายละเอียด" value="${escAttr(it.desc)}" data-field="desc" data-action="rc-item-input">
+      <input type="number" placeholder="จำนวนเงิน" value="${it.amount}" data-field="amount" data-action="rc-item-input">
+      <button class="iconbtn" data-action="rc-remove-row" data-idx="${idx}">✕</button>
+    </div>
+  `;
+}
+
+/* ============================= TRANSACTIONS (LEDGER) ============================= */
+let txFilter = {year: new Date().getFullYear(), type:'all'};
+
+function viewTransactions(){
+  const years = allYears();
+  const list = [...state.transactions]
+    .filter(t=>yearOf(t.date)===txFilter.year && (txFilter.type==='all'||t.type===txFilter.type))
+    .sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const incomeSum = list.filter(t=>t.type==='income').reduce((s,t)=>s+Number(t.amount||0),0);
+  const expenseSum = list.filter(t=>t.type==='expense').reduce((s,t)=>s+txInvoiceTotal(t),0);
+
+  return `
+    <div class="pagehead">
+      <div><h1>รายรับ-รายจ่าย</h1><div class="sub">บันทึกรายการทางบัญชีของบริษัท</div></div>
+      <div class="actions"><button class="btn btn-primary" data-action="new-tx">+ บันทึกรายจ่าย</button></div>
+    </div>
+
+    <div class="note-banner">รายรับจะถูกบันทึกอัตโนมัติเมื่อออกใบเสร็จ (ที่ปุ่ม "ออกใบเสร็จ") — หน้านี้ใช้เพิ่ม<b>รายจ่าย</b>เป็นหลัก หรือดูสรุปรายรับย้อนหลัง</div>
+
+    <div class="toolbar">
+      <select id="tx-year-filter">${years.map(y=>`<option value="${y}" ${txFilter.year===y?'selected':''}>ปี ${y+543}</option>`).join('')}</select>
+      <select id="tx-type-filter">
+        <option value="all" ${txFilter.type==='all'?'selected':''}>ทั้งหมด</option>
+        <option value="income" ${txFilter.type==='income'?'selected':''}>รายรับ</option>
+        <option value="expense" ${txFilter.type==='expense'?'selected':''}>รายจ่าย</option>
+      </select>
+      <div class="spacer"></div>
+      <div style="font-size:13.5px; color:var(--muted);">รายรับ <b style="color:var(--teal)">${fmt(incomeSum)}</b> &nbsp;|&nbsp; รายจ่าย <b style="color:var(--red)">${fmt(expenseSum)}</b></div>
+    </div>
+
+    <div class="card" style="padding:0;">
+      <table>
+        <thead><tr><th>วันที่</th><th>ประเภท</th><th>หมวดหมู่</th><th>รายละเอียด</th><th class="num">จำนวนเงิน</th><th></th></tr></thead>
+        <tbody>
+        ${list.length===0 ? `<tr class="empty-row"><td colspan="6">ไม่มีรายการในช่วงที่เลือก</td></tr>` :
+          list.map(t=>`
+          <tr class="rowhover">
+            <td>${thaiDate(t.date)}</td>
+            <td>${t.type==='income'?'<span class="badge badge-approved">รายรับ</span>':'<span class="badge badge-rejected" style="background:#FBEAEA; color:#A33;">รายจ่าย</span>'}</td>
+            <td>${esc(t.category||'-')}</td>
+            <td>${esc(t.description||'-')}</td>
+            <td class="num" style="color:${t.type==='income'?'var(--teal)':'var(--red)'}; font-weight:600;">${t.type==='income'?'+':'-'}${fmt(t.type==='expense'?txInvoiceTotal(t):t.amount)}${t.type==='expense'&&(t.vatEnabled||t.whtEnabled)?`<br><span style="color:var(--muted); font-size:11.5px; font-weight:400;">ฐาน ${fmt(t.amount)}${t.vatEnabled?` + VAT ${fmt(t.vatRate)}% ${fmt(txVat(t))}`:''}${t.whtEnabled?` − หัก ${fmt(t.whtRate)}% (${esc(t.payeeName||'-')}) ${fmt(txWht(t))}`:''} = จ่ายสุทธิ ${fmt(txNetPaid(t))}</span>`:''}</td>
+            <td style="white-space:nowrap;">
+              ${t.whtEnabled?`<button class="btn btn-ghost btn-sm" data-action="print-wht" data-id="${t.id}">พิมพ์ 50 ทวิ</button>`:''}
+              ${t.relatedReceiptId?'<span style="color:var(--muted); font-size:12px;">อัตโนมัติ</span>':`<button class="btn btn-ghost btn-sm" data-action="edit-tx" data-id="${t.id}">แก้ไข</button><button class="btn btn-danger btn-sm" data-action="delete-tx" data-id="${t.id}">ลบ</button>`}
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+let txForm = null;
+function newTxForm(existing){
+  if(existing){
+    txForm = JSON.parse(JSON.stringify(existing));
+    if(txForm.vatEnabled===undefined) txForm.vatEnabled = false;
+    if(txForm.vatRate===undefined) txForm.vatRate = 7;
+    return;
+  }
+  txForm = {
+    id:null,
+    date: todayISO(),
+    category: 'ต้นทุน License/Subscription (ecom.co.th, Pax8, ContactsFlow)',
+    description: '', amount: 0,
+    vatEnabled: false, vatRate: 7,
+    whtEnabled: false, whtType: WHT_INCOME_TYPES[0].code, whtRate: WHT_INCOME_TYPES[0].rate,
+    payeeName: '', payeeTaxId: '', payeeAddress: '',
+  };
+}
+function txModal(){
+  const f = txForm;
+  return `
+    <h2>${f.id?'แก้ไขรายจ่าย':'บันทึกรายจ่าย'}</h2>
+    <div class="modal-sub">ใช้สำหรับค่าใช้จ่ายของบริษัท เช่น ค่า license ต่อผู้ให้บริการ ค่าเช่า ค่าแรง</div>
+    <div class="formgrid">
+      <div class="field"><label>วันที่</label><input type="date" id="tx-date" value="${f.date}"></div>
+      <div class="field"><label>หมวดหมู่</label>
+        <select id="tx-category">
+          ${['ต้นทุน License/Subscription (ecom.co.th, Pax8, ContactsFlow)','ค่าเช่า/ค่าดำเนินการสำนักงาน','ค่าแรง/ค่าจ้างช่วง','ค่าเดินทาง','ค่าธรรมเนียมธนาคาร','อื่นๆ'].map(c=>`<option ${f.category===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" style="grid-column:1/-1;"><label>รายละเอียด</label><input type="text" id="tx-desc" value="${escAttr(f.description)}" placeholder="เช่น ค่า GWS License เดือน ส.ค. 69 — กิระ Trading"></div>
+      <div class="field"><label>จำนวนเงิน (บาท) <span class="opt">ก่อน VAT — ดูยอดบนใบแจ้งหนี้ก่อนบวก VAT</span></label><input type="number" id="tx-amount" value="${f.amount}"></div>
+    </div>
+
+    <div class="card" style="background:#FAFBFC; margin-top:16px; padding:14px 16px;">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:14px; cursor:pointer;">
+        <input type="checkbox" id="tx-vat-enabled" ${f.vatEnabled?'checked':''}> ผู้ขาย/ผู้ให้บริการจดทะเบียน VAT (คิด VAT เพิ่มจากยอดข้างต้น)
+      </label>
+      <div style="display:flex; align-items:center; gap:8px; margin-top:10px; ${f.vatEnabled?'':'opacity:.4; pointer-events:none;'}">
+        <span style="font-size:13.5px;">อัตรา VAT</span>
+        <input type="number" id="tx-vat-rate" value="${f.vatRate}" style="width:70px;">
+        <span style="font-size:13.5px;">%</span>
+      </div>
+    </div>
+
+    <div class="card" style="background:#FAFBFC; margin-top:16px; padding:14px 16px;">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:14px; cursor:pointer;">
+        <input type="checkbox" id="tx-wht-enabled" ${f.whtEnabled?'checked':''}> หักภาษี ณ ที่จ่ายจากผู้รับเงิน (ออกหนังสือรับรอง 50 ทวิ)
+      </label>
+      <div id="tx-wht-fields" style="margin-top:10px; ${f.whtEnabled?'':'opacity:.4; pointer-events:none;'}">
+        <div class="formgrid">
+          <div class="field"><label>ชื่อผู้รับเงิน</label><input type="text" id="tx-payee-name" value="${escAttr(f.payeeName)}" placeholder="ชื่อ-นามสกุล หรือชื่อนิติบุคคล"></div>
+          <div class="field"><label>เลขผู้เสียภาษี/เลขบัตร ปชช. ผู้รับเงิน</label><input type="text" id="tx-payee-taxid" value="${escAttr(f.payeeTaxId)}" placeholder="13 หลัก"></div>
+          <div class="field" style="grid-column:1/-1;"><label>ที่อยู่ผู้รับเงิน <span class="opt">(ถ้ามี)</span></label><input type="text" id="tx-payee-address" value="${escAttr(f.payeeAddress)}"></div>
+          <div class="field" style="grid-column:1/-1;"><label>ประเภทเงินได้</label>
+            <select id="tx-wht-type">
+              ${WHT_INCOME_TYPES.map(o=>`<option value="${o.code}" ${f.whtType===o.code?'selected':''}>${o.label} (${o.rate}%)</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+          <span style="font-size:13.5px;">อัตราภาษี</span>
+          <input type="number" id="tx-wht-rate" value="${f.whtRate}" style="width:70px;">
+          <span style="font-size:13.5px;">%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="totals-box">${txTotalsBoxHtml(f)}</div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-action="close-modal">ยกเลิก</button>
+      <button class="btn btn-primary" data-action="save-tx">บันทึก</button>
+    </div>
+  `;
+}
+function txTotalsBoxHtml(f){
+  if(!f.whtEnabled && !f.vatEnabled) return '';
+  const amount = Number(f.amount)||0;
+  const vat = f.vatEnabled ? amount * (Number(f.vatRate)||0)/100 : 0;
+  const invoiceTotal = amount + vat;
+  const wht = f.whtEnabled ? amount * (Number(f.whtRate)||0)/100 : 0; // WHT base is always pre-VAT
+  const net = invoiceTotal - wht;
+  return `
+    <div class="totals-row"><span class="lbl">ยอดก่อน VAT (ฐานคำนวณภาษีหัก ณ ที่จ่าย)</span><span>${fmt(amount)} บาท</span></div>
+    ${f.vatEnabled?`<div class="totals-row"><span class="lbl">VAT ${fmt(f.vatRate)}%</span><span>+ ${fmt(vat)} บาท</span></div>
+    <div class="totals-row"><span class="lbl">ยอดตามใบแจ้งหนี้ (รวม VAT)</span><span>${fmt(invoiceTotal)} บาท</span></div>`:''}
+    ${f.whtEnabled?`<div class="totals-row"><span class="lbl">หัก ณ ที่จ่าย ${fmt(f.whtRate)}% (คิดจากยอดก่อน VAT)</span><span>- ${fmt(wht)} บาท</span></div>`:''}
+    <div class="totals-row grand"><span class="lbl">จ่ายสุทธิให้ผู้รับเงิน</span><span>${fmt(net)} บาท</span></div>
+  `;
+}
+
+/* ============================= TAX SUMMARY ============================= */
+let taxYear = new Date().getFullYear();
+
+function viewTax(){
+  const years = allYears();
+  const rcYear = state.receipts.filter(r=>yearOf(r.date)===taxYear);
+  const txYear = state.transactions.filter(t=>yearOf(t.date)===taxYear);
+  const revenue = txYear.filter(t=>t.type==='income').reduce((s,t)=>s+Number(t.amount||0),0);
+  const expense = txYear.filter(t=>t.type==='expense').reduce((s,t)=>s+txInvoiceTotal(t),0);
+  const whtTotal = rcYear.reduce((s,r)=>s+rcWht(r),0);
+  const netBeforeTax = revenue - expense;
+  const pending = rcYear.filter(r=>r.whtEnabled && !r.whtCertReceived);
+  const received = rcYear.filter(r=>r.whtEnabled && r.whtCertReceived);
+
+  return `
+    <div class="pagehead">
+      <div><h1>สรุปภาษี</h1><div class="sub">ข้อมูลสำหรับใช้ยื่นภาษีเงินได้นิติบุคคลประจำปี</div></div>
+      <div class="actions"><select id="tax-year-filter">${years.map(y=>`<option value="${y}" ${taxYear===y?'selected':''}>ปี ${y+543}</option>`).join('')}</select></div>
+    </div>
+
+    <div class="note-banner">Techfinder ยังไม่ได้จดทะเบียน VAT — สรุปนี้จึงไม่รวมภาษีมูลค่าเพิ่ม ครอบคลุมเฉพาะรายได้/รายจ่ายเพื่อใช้ประกอบการยื่นภาษีเงินได้นิติบุคคล (ภ.ง.ด.50) และเครดิตภาษีหัก ณ ที่จ่าย ควรให้นักบัญชี/ผู้สอบบัญชีตรวจทานก่อนยื่นจริงเสมอ</div>
+
+    <div class="grid-cards">
+      <div class="stat"><div class="label">รายได้รวม</div><div class="val teal">${fmt(revenue)}</div><div class="hint">บาท (ยอดเต็มก่อนหัก ณ ที่จ่าย)</div></div>
+      <div class="stat"><div class="label">รายจ่ายรวม</div><div class="val">${fmt(expense)}</div><div class="hint">บาท</div></div>
+      <div class="stat"><div class="label">กำไรก่อนภาษี (โดยประมาณ)</div><div class="val" style="color:${netBeforeTax>=0?'var(--navy)':'var(--red)'}">${fmt(netBeforeTax)}</div><div class="hint">รายได้ − รายจ่าย</div></div>
+      <div class="stat"><div class="label">เครดิตภาษีหัก ณ ที่จ่ายสะสม</div><div class="val amber">${fmt(whtTotal)}</div><div class="hint">ใช้หักลบภาษีที่ต้องชำระได้</div></div>
+    </div>
+
+    <div class="card">
+      <h3>รายการที่ต้องขอ 50 ทวิ เพิ่ม (${pending.length} รายการ)</h3>
+      ${pending.length===0 ? `<div style="color:var(--muted); font-size:14px;">ครบทุกใบแล้ว 🎉</div>` : `
+      <table>
+        <thead><tr><th>เลขที่ใบเสร็จ</th><th>ลูกค้า</th><th>วันที่</th><th class="num">ยอด WHT</th><th></th></tr></thead>
+        <tbody>
+        ${pending.map(r=>`<tr class="rowhover">
+          <td>${r.receiptNo}</td><td>${esc(clientName(r.clientId))}</td><td>${thaiDate(r.date)}</td>
+          <td class="num">${fmt(rcWht(r))}</td>
+          <td><button class="btn btn-teal btn-sm" data-action="mark-wht-cert-received" data-id="${r.id}">ทำเครื่องหมายว่าได้รับแล้ว</button></td>
+        </tr>`).join('')}
+        </tbody>
+      </table>`}
+    </div>
+
+    <div class="card">
+      <h3>ใบเสร็จที่มี 50 ทวิ ครบแล้ว (${received.length} รายการ)</h3>
+      ${received.length===0 ? `<div style="color:var(--muted); font-size:14px;">ยังไม่มีรายการ</div>` : `
+      <table>
+        <thead><tr><th>เลขที่ใบเสร็จ</th><th>ลูกค้า</th><th>วันที่</th><th class="num">ยอด WHT</th></tr></thead>
+        <tbody>
+        ${received.map(r=>`<tr class="rowhover"><td>${r.receiptNo}</td><td>${esc(clientName(r.clientId))}</td><td>${thaiDate(r.date)}</td><td class="num">${fmt(rcWht(r))}</td></tr>`).join('')}
+        </tbody>
+      </table>`}
+    </div>
+
+    <div class="card">
+      <h3>รายจ่ายตามหมวดหมู่</h3>
+      ${renderExpenseByCategory(txYear)}
+    </div>
+  `;
+}
+function renderExpenseByCategory(txYear){
+  const map = {};
+  txYear.filter(t=>t.type==='expense').forEach(t=>{
+    map[t.category] = (map[t.category]||0) + txInvoiceTotal(t);
+  });
+  const rows = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  if(rows.length===0) return `<div style="color:var(--muted); font-size:14px;">ยังไม่มีรายจ่ายบันทึกไว้ในปีนี้</div>`;
+  return `<table><thead><tr><th>หมวดหมู่</th><th class="num">รวม</th></tr></thead><tbody>
+    ${rows.map(([cat,amt])=>`<tr class="rowhover"><td>${esc(cat)}</td><td class="num">${fmt(amt)}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+/* ============================= SETTINGS ============================= */
+function viewSettings(){
+  const s = state.settings;
+  return `
+    <div class="pagehead"><div><h1>ตั้งค่าบริษัท</h1><div class="sub">ข้อมูลนี้จะแสดงบนใบเสนอราคา/ใบเสร็จเมื่อพิมพ์</div></div></div>
+    <div class="card" style="max-width:560px;">
+      <div class="formgrid single">
+        <div class="field"><label>ชื่อนิติบุคคล</label><input type="text" id="s-name" value="${escAttr(s.companyName)}"></div>
+        <div class="field"><label>เลขประจำตัวผู้เสียภาษี</label><input type="text" id="s-taxid" value="${escAttr(s.taxId)}"></div>
+        <div class="field"><label>ที่อยู่</label><textarea id="s-address">${esc(s.address)}</textarea></div>
+        <div class="formgrid">
+          <div class="field"><label>เบอร์โทร</label><input type="text" id="s-phone" value="${escAttr(s.phone)}"></div>
+          <div class="field"><label>อีเมล</label><input type="text" id="s-email" value="${escAttr(s.email)}"></div>
+        </div>
+        <div class="field"><label>เว็บไซต์ <span class="opt">(ถ้ามี)</span></label><input type="text" id="s-website" value="${escAttr(s.website||'')}"></div>
+        <div class="field"><label>ชื่อ-ตำแหน่งผู้มีอำนาจลงนาม <span class="opt">(แสดงบนช่องเซ็นเอกสาร)</span></label><input type="text" id="s-signatory" value="${escAttr(s.signatoryName||'')}" placeholder="เช่น คุณมุก / กรรมการผู้จัดการ"></div>
+        <div class="field">
+          <label style="display:flex; align-items:center; gap:8px;"><input type="checkbox" id="s-vat" ${s.vatRegistered?'checked':''}> จดทะเบียนภาษีมูลค่าเพิ่ม (VAT) แล้ว</label>
+        </div>
+        <div class="field"><label>อัตราหัก ณ ที่จ่ายเริ่มต้น (%)</label><input type="number" id="s-wht" value="${s.defaultWhtRate}" style="max-width:120px;"></div>
+        <div class="field" style="border-top:1px solid var(--border); padding-top:14px; margin-top:4px;"><label>บัญชีรับโอนเงิน <span class="opt">(แสดงบนใบเสนอราคา)</span></label></div>
+        <div class="formgrid">
+          <div class="field"><label>ธนาคาร</label><input type="text" id="s-bank-name" value="${escAttr(s.bankName||'')}"></div>
+          <div class="field"><label>สาขา</label><input type="text" id="s-bank-branch" value="${escAttr(s.bankBranch||'')}"></div>
+          <div class="field"><label>ประเภทบัญชี</label><input type="text" id="s-bank-type" value="${escAttr(s.bankAccountType||'')}"></div>
+          <div class="field"><label>เลขที่บัญชี</label><input type="text" id="s-bank-no" value="${escAttr(s.bankAccountNo||'')}"></div>
+        </div>
+        <div class="field"><label>ชื่อบัญชี</label><input type="text" id="s-bank-acname" value="${escAttr(s.bankAccountName||'')}"></div>
+      </div>
+      <div class="modal-actions" style="border-top:none; padding-top:6px;">
+        <button class="btn btn-primary" data-action="save-settings">บันทึกการตั้งค่า</button>
+      </div>
+    </div>
+  `;
+}
+
+/* ============================= PRINT VIEWS ============================= */
+function addDays(iso, days){
+  const d = new Date(iso+'T00:00:00');
+  d.setDate(d.getDate() + (Number(days)||0));
+  return d.toISOString().slice(0,10);
+}
+
+function printQt(qt){
+  const t = qtTotal(qt);
+  const cl = state.clients.find(c=>c.id===qt.clientId) || {name:'-'};
+  const s = state.settings;
+  const type = qt.qtType==='recurring' ? 'recurring' : qt.qtType==='annual' ? 'annual' : 'one_time';
+  const isOneTime = type==='one_time';
+  const validUntil = addDays(qt.date, qt.validDays||30);
+  const wht = qtWht(qt), net = qtNet(qt);
+  const unitLabel = type==='recurring' ? ' / เดือน' : '';
+  const span = type==='annual' ? 4 : 3;
+  const whtRows = qt.whtEnabled ? `
+    <tr><td colspan="${span}">หัก ภาษี ณ ที่จ่าย ${fmt(qt.whtRate)}%</td><td class="num">- ${fmt(wht)}</td></tr>
+    <tr class="totalrow"><td colspan="${span}">รับสุทธิโดยประมาณ${unitLabel}</td><td class="num">${fmt(net)}</td></tr>
+  ` : '';
+
+  const itemTableHtml = type==='annual' ? `
+    <table><thead><tr><th>License รายปี</th><th class="num">จำนวน</th><th class="num">ราคา/เดือน (บาท)</th><th class="num">จำนวนเดือน</th><th class="num">รวมราคา (บาท)</th></tr></thead>
+    <tbody>
+    ${qt.annualItems.filter(it=>it.desc||it.unitPrice).map(it=>`<tr><td>${esc(it.desc)}</td><td class="num">${it.qty}</td><td class="num">${fmt(it.unitPrice)}</td><td class="num">${it.months}</td><td class="num">${fmt(qtRowTotal(it))}</td></tr>`).join('')}
+    <tr class="totalrow"><td colspan="4">รวม License รายปี</td><td class="num">${fmt(t.ann)}</td></tr>
+    ${whtRows}
+    </tbody></table>
+  ` : isOneTime ? `
+    <table><thead><tr><th>ค่าใช้จ่ายครั้งเดียว (One-time)</th><th class="num">จำนวน</th><th class="num">ราคา/หน่วย (บาท)</th><th class="num">รวม (บาท)</th></tr></thead>
+    <tbody>
+    ${qt.oneTimeItems.filter(it=>it.desc||it.unitPrice).map(it=>`<tr><td>${esc(it.desc)}</td><td class="num">${it.qty}</td><td class="num">${fmt(it.unitPrice)}</td><td class="num">${fmt((it.qty||0)*(it.unitPrice||0))}</td></tr>`).join('')}
+    <tr class="totalrow"><td colspan="3">รวม One-time</td><td class="num">${fmt(t.one)}</td></tr>
+    ${whtRows}
+    </tbody></table>
+  ` : `
+    <table><thead><tr><th>ค่าใช้จ่ายรายเดือน (Recurring)</th><th class="num">จำนวน</th><th class="num">ราคา/หน่วย (บาท)</th><th class="num">รวม (บาท)</th></tr></thead>
+    <tbody>
+    ${qt.recurringItems.filter(it=>it.desc||it.unitPrice).map(it=>`<tr><td>${esc(it.desc)}</td><td class="num">${it.qty}</td><td class="num">${fmt(it.unitPrice)}</td><td class="num">${fmt((it.qty||0)*(it.unitPrice||0))}</td></tr>`).join('')}
+    <tr class="totalrow"><td colspan="3">รวมรายเดือน</td><td class="num">${fmt(t.rec)}</td></tr>
+    ${whtRows}
+    </tbody></table>
+  `;
+
+  const priceNotes = [
+    s.vatRegistered
+      ? 'ราคาข้างต้นเป็นราคาก่อนภาษีมูลค่าเพิ่ม (VAT 7%) จะคำนวณ VAT เพิ่มในใบแจ้งหนี้ตามจริง'
+      : `ราคาข้างต้นเป็นราคาสุทธิ ไม่มีภาษีมูลค่าเพิ่ม (${esc(s.companyName)} ยังไม่ได้จดทะเบียน VAT) จะออกเป็นใบเสร็จรับเงิน ไม่ใช่ใบกำกับภาษีเต็มรูปแบบ`,
+    qt.whtEnabled ? `ยอด "รับสุทธิโดยประมาณ" หักภาษีเงินได้ ณ ที่จ่าย ${fmt(qt.whtRate)}% ไว้ล่วงหน้าเพื่อการประมาณการเท่านั้น ยอดหักจริงคำนวณจากใบเสร็จรับเงินฉบับจริงและหนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ) ที่ได้รับ` : '',
+    type==='recurring' ? 'ค่าใช้จ่ายรายเดือนข้างต้นเป็นค่า License/Subscription ที่ผูกกับผู้ให้บริการภายนอก อัตราอาจเปลี่ยนแปลงตามประกาศของผู้ให้บริการและอัตราแลกเปลี่ยน USD/THB' : '',
+    type==='annual' ? 'ค่า License รายปีข้างต้นคำนวณจากราคาต่อเดือน × จำนวนเดือน เป็นค่า License/Subscription ที่ผูกกับผู้ให้บริการภายนอก ราคาและอัตราแลกเปลี่ยน USD/THB อาจเปลี่ยนแปลงเมื่อต่ออายุ' : '',
+    `ราคานี้ยืนราคา ${qt.validDays||30} วันนับจากวันที่ออกเอกสาร (ถึงวันที่ ${thaiDate(validUntil)}) หลังจากนั้นขอสงวนสิทธิ์ปรับราคาตามต้นทุน ณ ขณะนั้น`,
+  ].filter(Boolean);
+
+  const paymentTerms = type==='annual' ? [
+    'ค่า License รายปี: ชำระเต็มจำนวนล่วงหน้าก่อนเริ่มใช้งาน กำหนดชำระภายใน 7 วันนับจากวันที่ในใบแจ้งหนี้',
+    `${esc(s.companyName)} จะดำเนินการสั่งซื้อ/เปิดใช้งาน License เมื่อได้รับใบเสนอราคาฉบับนี้ที่ลงนามอนุมัติ (หรือใบสั่งซื้อ) และได้รับชำระเงินเรียบร้อยแล้ว`,
+    'รายละเอียดเพิ่มเติมเกี่ยวกับขอบเขตงาน การรับประกัน และเงื่อนไขอื่นๆ เป็นไปตามสัญญาว่าจ้างบริการ (Service Agreement) แนบท้าย',
+  ] : isOneTime ? [
+    'ค่าติดตั้ง (One-time): ชำระมัดจำ 50% ก่อนเริ่มงาน และชำระส่วนที่เหลือ 50% เมื่องานเสร็จสมบูรณ์และลูกค้าลงนามรับมอบงาน (Completion Certificate)',
+    `${esc(s.companyName)} จะเริ่มดำเนินงานเมื่อได้รับใบเสนอราคาฉบับนี้ที่ลงนามอนุมัติ (หรือใบสั่งซื้อ) และได้รับเงินมัดจำเรียบร้อยแล้วเท่านั้น`,
+    'รายละเอียดเพิ่มเติมเกี่ยวกับขอบเขตงาน การรับประกัน และเงื่อนไขอื่นๆ เป็นไปตามสัญญาว่าจ้างบริการ (Service Agreement) แนบท้าย',
+  ] : [
+    'ค่าใช้จ่ายรายเดือน (Recurring): เรียกเก็บล่วงหน้าทุกต้นเดือน (Bill in advance) กำหนดชำระภายใน 7 วันนับจากวันที่ในใบแจ้งหนี้',
+    `${esc(s.companyName)} จะเริ่มให้บริการเมื่อได้รับใบเสนอราคาฉบับนี้ที่ลงนามอนุมัติ (หรือใบสั่งซื้อ) เรียบร้อยแล้ว`,
+    'รายละเอียดเพิ่มเติมเกี่ยวกับขอบเขตงาน การรับประกัน และเงื่อนไขอื่นๆ เป็นไปตามสัญญาว่าจ้างบริการ (Service Agreement) แนบท้าย',
+  ];
+
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <html><head><meta charset="utf-8"><title>${qt.qtNo}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      body{font-family:'Sarabun',sans-serif; padding:40px; color:#1B222E;}
+      h1{color:#1B2A4A; font-size:26px; margin-bottom:0;}
+      h3{color:#1B2A4A; font-size:15px; margin:22px 0 8px;}
+      .muted{color:#6B7280; font-size:13px;}
+      table{width:100%; border-collapse:collapse; margin-top:10px; font-size:13.5px;}
+      th{background:#1B2A4A; color:#fff; text-align:left; padding:8px 10px; font-size:12px;}
+      td{padding:8px 10px; border-bottom:1px solid #E3E6EB;}
+      .num{text-align:right; font-family:monospace;}
+      .totalrow td{font-weight:700; background:#F5F6F8;}
+      ul{margin:6px 0; padding-left:20px; font-size:13px; color:#374151;}
+      li{margin-bottom:5px;}
+      ol{margin:6px 0; padding-left:20px; font-size:13px; color:#374151;}
+      ol li{margin-bottom:6px;}
+      .sigrow{display:flex; justify-content:space-between; margin-top:50px;}
+      .sigbox{width:46%; text-align:center;}
+      .sigline{border-bottom:1px solid #999; height:44px; margin-bottom:8px;}
+      @media print{ .no-print{display:none;} }
+    </style></head><body>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div style="display:flex; gap:14px; align-items:center;">
+        <img src="${LOGO_DATA_URI}" style="width:56px; height:56px; border-radius:10px;">
+        <div><h1>${esc(s.companyName)}</h1><div class="muted">เลขประจำตัวผู้เสียภาษี: ${esc(s.taxId)}<br>${esc(s.address)}<br>${s.phone?('โทร '+esc(s.phone)+'  '):''}${s.email?('อีเมล '+esc(s.email)+'  '):''}${s.website?('เว็บไซต์ '+esc(s.website)):''}</div></div>
+      </div>
+      <div style="text-align:right;"><h1>ใบเสนอราคา</h1><div class="muted">QUOTATION</div></div>
+    </div>
+
+    <table style="margin-top:22px;"><tbody>
+      <tr><td style="width:140px; border:none; padding:4px 0; color:#6B7280;"><b>เลขที่ QT</b></td><td style="border:none; padding:4px 0;">${qt.qtNo}</td>
+          <td style="width:140px; border:none; padding:4px 0; color:#6B7280;"><b>วันที่ออกเอกสาร</b></td><td style="border:none; padding:4px 0;">${thaiDate(qt.date)}</td></tr>
+      <tr><td style="border:none; padding:4px 0; color:#6B7280;"><b>ลูกค้า</b></td><td style="border:none; padding:4px 0;">${esc(cl.name)}</td>
+          <td style="border:none; padding:4px 0; color:#6B7280;"><b>ยืนราคาถึง</b></td><td style="border:none; padding:4px 0;">${thaiDate(validUntil)}</td></tr>
+      ${qt.projectName ? `<tr><td style="border:none; padding:4px 0; color:#6B7280;"><b>โครงการ</b></td><td colspan="3" style="border:none; padding:4px 0;">${esc(qt.projectName)}</td></tr>` : ''}
+    </tbody></table>
+
+    ${itemTableHtml}
+
+    <h3>หมายเหตุราคา</h3>
+    <ul>${priceNotes.map(n=>`<li>${n}</li>`).join('')}</ul>
+
+    <h3>เงื่อนไขการชำระเงิน</h3>
+    <ol>${paymentTerms.map(n=>`<li>${n}</li>`).join('')}</ol>
+
+    ${s.bankAccountNo ? `
+    <h3>ช่องทางการโอนเงิน</h3>
+    <div style="border:1px solid #E3E6EB; border-radius:8px; padding:10px 14px; font-size:13.5px; line-height:1.7;">
+      <b>${esc(s.bankName||'')}</b>${s.bankBranch?` ${esc(s.bankBranch)}`:''}${s.bankAccountType?` · บัญชี${esc(s.bankAccountType)}`:''}<br>
+      เลขที่บัญชี: <b style="font-family:monospace; font-size:15px;">${esc(s.bankAccountNo)}</b><br>
+      ชื่อบัญชี: <b>${esc(s.bankAccountName||s.companyName)}</b>
+    </div>` : ''}
+
+    <div class="sigrow">
+      <div class="sigbox">
+        <div class="sigline"></div>
+        <div>ผู้เสนอราคา</div>
+        <div class="muted">(${esc(s.signatoryName||'...........................................................')})</div>
+        <div class="muted">วันที่ ____/____/______</div>
+      </div>
+      <div class="sigbox">
+        <div class="sigline"></div>
+        <div>ผู้อนุมัติ (ลูกค้า)</div>
+        <div class="muted">(...........................................................)</div>
+        <div class="muted">ตำแหน่ง _______________ วันที่ ____/____/______</div>
+      </div>
+    </div>
+    </body></html>
+  `);
+  win.document.close();
+  setTimeout(()=>win.print(), 300);
+}
+
+function printRc(rc){
+  const cl = state.clients.find(c=>c.id===rc.clientId) || {name:'-'};
+  const s = state.settings;
+  const gross = rcGross(rc), wht = rcWht(rc), net = rcNet(rc);
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <html><head><meta charset="utf-8"><title>${rc.receiptNo}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      body{font-family:'Sarabun',sans-serif; padding:40px; color:#1B222E;}
+      h1{color:#1B2A4A; font-size:26px; margin-bottom:0;}
+      .muted{color:#6B7280; font-size:13px;}
+      table{width:100%; border-collapse:collapse; margin-top:16px; font-size:13.5px;}
+      th{background:#1B2A4A; color:#fff; text-align:left; padding:8px 10px; font-size:12px;}
+      td{padding:8px 10px; border-bottom:1px solid #E3E6EB;}
+      .num{text-align:right; font-family:monospace;}
+      .totalrow td{font-weight:700;}
+      .grand td{background:#2E7D6E; color:#fff; font-weight:700;}
+    </style></head><body>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div style="display:flex; gap:14px; align-items:center;">
+        <img src="${LOGO_DATA_URI}" style="width:56px; height:56px; border-radius:10px;">
+        <div><h1>${esc(s.companyName)}</h1><div class="muted">${esc(s.taxId)}<br>${esc(s.address)}</div></div>
+      </div>
+      <div style="text-align:right;"><h1>ใบเสร็จรับเงิน</h1><div class="muted">เลขที่ ${rc.receiptNo}<br>วันที่ ${thaiDate(rc.date)}</div></div>
+    </div>
+    <p><b>ได้รับเงินจาก:</b> ${esc(cl.name)}${rc.refQt?`<br><b>อ้างอิง:</b> ${esc(rc.refQt)}`:''}</p>
+    <table><thead><tr><th>รายการ</th><th class="num">จำนวนเงิน</th></tr></thead>
+    <tbody>
+    ${rc.items.map(it=>`<tr><td>${esc(it.desc)}</td><td class="num">${fmt(it.amount)}</td></tr>`).join('')}
+    <tr class="totalrow"><td>รวมเป็นเงิน (ก่อนหัก)</td><td class="num">${fmt(gross)}</td></tr>
+    ${rc.whtEnabled?`<tr><td>หัก ภาษี ณ ที่จ่าย ${rc.whtRate}%</td><td class="num">- ${fmt(wht)}</td></tr>`:''}
+    <tr class="grand"><td>จำนวนเงินที่รับจริง (สุทธิ)</td><td class="num">${fmt(net)}</td></tr>
+    </tbody></table>
+    <p class="muted" style="margin-top:20px;">ช่องทางชำระ: ${esc(rc.paymentMethod||'-')}</p>
+    <p class="muted">${s.vatRegistered? '' : 'ใบเสร็จฉบับนี้ออกในนามผู้ที่ยังไม่ได้จดทะเบียนภาษีมูลค่าเพิ่ม (Non-VAT) จึงไม่ใช่ใบกำกับภาษี'}</p>
+    <div style="margin-top:60px; text-align:right;">
+      <div style="display:inline-block; text-align:center;">
+        <div style="border-bottom:1px solid #999; width:220px; height:40px;"></div>
+        <div class="muted">ผู้รับเงิน</div>
+      </div>
+    </div>
+    </body></html>
+  `);
+  win.document.close();
+  setTimeout(()=>win.print(), 300);
+}
+
+function printWht50(t){
+  const s = state.settings;
+  const incomeType = WHT_INCOME_TYPES.find(o=>o.code===t.whtType);
+  const wht = txWht(t), net = txNetPaid(t);
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <html><head><meta charset="utf-8"><title>${t.certNo}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      body{font-family:'Sarabun',sans-serif; padding:40px; color:#1B222E;}
+      h1{color:#1B2A4A; font-size:20px; margin:0;}
+      h2{color:#1B2A4A; font-size:15px; margin:4px 0 0;}
+      .muted{color:#6B7280; font-size:13px;}
+      .partybox{border:1px solid #E3E6EB; border-radius:8px; padding:12px 14px; font-size:13.5px;}
+      .partygrid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:18px;}
+      table{width:100%; border-collapse:collapse; margin-top:18px; font-size:13px;}
+      th{background:#1B2A4A; color:#fff; text-align:left; padding:8px 10px; font-size:11.5px;}
+      td{padding:8px 10px; border-bottom:1px solid #E3E6EB;}
+      .num{text-align:right; font-family:monospace;}
+      .grand td{background:#2E7D6E; color:#fff; font-weight:700;}
+      .note-box{margin-top:18px; font-size:12px; color:#6B7280; border-left:3px solid #B45309; padding:8px 12px; background:#FEF3E2;}
+      @media print{ .no-print{display:none;} }
+    </style></head><body>
+    <div style="text-align:center;">
+      <h1>หนังสือรับรองการหักภาษี ณ ที่จ่าย</h1>
+      <h2>ตามมาตรา 50 ทวิ แห่งประมวลรัษฎากร</h2>
+      <div class="muted" style="margin-top:6px;">เลขที่ ${t.certNo} &nbsp;|&nbsp; วันที่ออกหนังสือ ${thaiDate(t.date)}</div>
+    </div>
+
+    <div class="partygrid">
+      <div class="partybox">
+        <b>ผู้มีหน้าที่หักภาษี ณ ที่จ่าย (ผู้จ่ายเงิน)</b><br>
+        ${esc(s.companyName)}<br>
+        เลขประจำตัวผู้เสียภาษี: ${esc(s.taxId)}<br>
+        ${esc(s.address)}
+      </div>
+      <div class="partybox">
+        <b>ผู้ถูกหักภาษี ณ ที่จ่าย (ผู้รับเงิน)</b><br>
+        ${esc(t.payeeName)}<br>
+        เลขประจำตัวผู้เสียภาษี/เลขบัตร ปชช.: ${esc(t.payeeTaxId||'-')}<br>
+        ${esc(t.payeeAddress||'-')}
+      </div>
+    </div>
+
+    <table><thead><tr>
+      <th>ประเภทเงินได้พึงประเมินที่จ่าย</th><th>วันเดือนปีที่จ่าย</th><th class="num">จำนวนเงินที่จ่าย</th><th class="num">อัตรา</th><th class="num">ภาษีที่หักและนำส่งไว้</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td>${incomeType?esc(incomeType.label):'-'}${t.description?`<br><span class="muted">${esc(t.description)}</span>`:''}</td>
+        <td>${thaiDate(t.date)}</td>
+        <td class="num">${fmt(t.amount)}</td>
+        <td class="num">${fmt(t.whtRate)}%</td>
+        <td class="num">${fmt(wht)}</td>
+      </tr>
+      <tr class="grand"><td colspan="4">รวมภาษีที่หักและนำส่งไว้ทั้งสิ้น</td><td class="num">${fmt(wht)}</td></tr>
+    </tbody></table>
+
+    ${t.vatEnabled?`<p class="muted" style="margin-top:14px; margin-bottom:2px;">ยอดตามใบแจ้งหนี้ผู้รับเงิน (รวม VAT ${fmt(t.vatRate)}%): ${fmt(txInvoiceTotal(t))} บาท <span style="color:#9CA3AF;">(ภาษีหัก ณ ที่จ่ายคำนวณจากยอดก่อน VAT ${fmt(t.amount)} บาทเท่านั้น)</span></p>`:''}
+    <p class="muted" ${t.vatEnabled?'':'style="margin-top:14px;"'}>จำนวนเงินที่จ่ายสุทธิให้ผู้รับเงิน (หลังหักภาษี ณ ที่จ่าย${t.vatEnabled?' บวก VAT':''}): <b>${fmt(net)} บาท</b></p>
+
+    <div class="note-box">
+      เอกสารนี้จัดทำขึ้นโดยระบบเพื่อใช้เป็นหลักฐานหักภาษี ณ ที่จ่ายให้แก่ผู้รับเงิน ไม่ใช่แบบฟอร์มทางการของกรมสรรพากรฉบับเต็ม
+      ควรเทียบรูปแบบกับแบบหนังสือรับรองการหักภาษี ณ ที่จ่ายของกรมสรรพากร (rd.go.th) ก่อนใช้งานจริง และอย่าลืม<b>ยื่นแบบ ภ.ง.ด.3 (บุคคลธรรมดา) หรือ ภ.ง.ด.53 (นิติบุคคล)</b>
+      พร้อมนำส่งภาษีที่หักไว้ต่อกรมสรรพากรภายในวันที่ 7 ของเดือนถัดจากเดือนที่จ่ายเงิน (หรือภายในวันที่ 15 หากยื่นผ่านอินเทอร์เน็ต)
+    </div>
+
+    <div style="margin-top:60px; text-align:right;">
+      <div style="display:inline-block; text-align:center;">
+        <div style="border-bottom:1px solid #999; width:220px; height:40px;"></div>
+        <div class="muted">ผู้จ่ายเงิน (${esc(s.signatoryName||'...........................................................')})</div>
+      </div>
+    </div>
+    </body></html>
+  `);
+  win.document.close();
+  setTimeout(()=>win.print(), 300);
+}
+
+/* ============================= MODAL WRAPPER ============================= */
+function renderModal(){
+  let body = '';
+  if(modal.type==='client') body = clientModal(modal.payload);
+  if(modal.type==='qt') body = qtModal();
+  if(modal.type==='rc') body = rcModal();
+  if(modal.type==='tx') body = txModal();
+  return `<div class="modal-backdrop" id="modal-backdrop-el"><div class="modal">${body}</div></div>`;
+}
+
+/* ============================= ESCAPE HELPERS ============================= */
+function esc(str){
+  return String(str==null?'':str).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function escAttr(str){ return esc(str); }
+
+/* ============================= EVENTS ============================= */
+function bindEvents(){
+  document.querySelectorAll('[data-nav]').forEach(el=>{
+    el.addEventListener('click', ()=>{ currentView = el.dataset.nav; render(); });
+  });
+
+  // Generic click handler via delegation on #app to keep it simple & robust
+  const app = document.getElementById('app');
+  app.onclick = async (e)=>{
+    if(e.target.id==='modal-backdrop-el'){ modal=null; render(); return; }
+    const t = e.target.closest('[data-action]');
+    if(!t) return;
+    const action = t.dataset.action;
+
+    if(action==='close-modal'){ modal=null; render(); return; }
+
+    if(action==='new-client'){ modal={type:'client', payload:null}; render(); return; }
+    if(action==='edit-client'){ modal={type:'client', payload: state.clients.find(c=>c.id===t.dataset.id)}; render(); return; }
+    if(action==='delete-client'){
+      if(confirm('ลบลูกค้ารายนี้หรือไม่?')){ state.clients = state.clients.filter(c=>c.id!==t.dataset.id); await saveState(); render(); showToast('ลบลูกค้าแล้ว'); }
+      return;
+    }
+    if(action==='save-client'){
+      const id = t.dataset.id;
+      const data = {
+        name: document.getElementById('f-name').value.trim(),
+        taxId: document.getElementById('f-taxid').value.trim(),
+        contact: document.getElementById('f-contact').value.trim(),
+        address: document.getElementById('f-address').value.trim(),
+        phone: document.getElementById('f-phone').value.trim(),
+        email: document.getElementById('f-email').value.trim(),
+      };
+      if(!data.name){ showToast('กรุณากรอกชื่อบริษัท'); return; }
+      if(id){
+        const c = state.clients.find(c=>c.id===id);
+        Object.assign(c, data);
+      } else {
+        state.clients.push({id:uid('cl'), ...data});
+      }
+      await saveState(); modal=null; render(); showToast('บันทึกข้อมูลลูกค้าแล้ว');
+      return;
+    }
+
+    /* QUOTATIONS */
+    if(action==='new-qt'){
+      if(state.clients.length===0){ showToast('กรุณาเพิ่มลูกค้าก่อน'); return; }
+      newQtForm(null); modal={type:'qt', payload:null}; render(); return;
+    }
+    if(action==='edit-qt'){ newQtForm(state.quotations.find(q=>q.id===t.dataset.id)); modal={type:'qt', payload:null}; render(); return; }
+    if(action==='delete-qt'){
+      if(confirm('ลบใบเสนอราคานี้หรือไม่?')){ state.quotations = state.quotations.filter(q=>q.id!==t.dataset.id); await saveState(); render(); showToast('ลบแล้ว'); }
+      return;
+    }
+    if(action==='qt-add-row'){
+      qtForm[t.dataset.list].push(newQtItem(t.dataset.list));
+      render(); return;
+    }
+    if(action==='qt-remove-row'){
+      qtForm[t.dataset.list].splice(Number(t.dataset.idx),1);
+      if(qtForm[t.dataset.list].length===0) qtForm[t.dataset.list].push(newQtItem(t.dataset.list));
+      render(); return;
+    }
+    if(action==='save-qt'){
+      qtForm.clientId = document.getElementById('qt-client').value;
+      qtForm.date = document.getElementById('qt-date').value;
+      qtForm.validDays = Number(document.getElementById('qt-validdays').value)||30;
+      qtForm.projectName = document.getElementById('qt-project').value.trim();
+      qtForm.whtEnabled = document.getElementById('qt-wht-enabled').checked;
+      qtForm.whtRate = Number(document.getElementById('qt-wht-rate').value)||0;
+      if(qtForm.id){
+        const i = state.quotations.findIndex(q=>q.id===qtForm.id);
+        state.quotations[i] = qtForm;
+      } else {
+        qtForm.id = uid('qt');
+        state.quotations.push(qtForm);
+        state.counters.qt += 1;
+      }
+      await saveState(); modal=null; render(); showToast('บันทึกใบเสนอราคาแล้ว');
+      return;
+    }
+    if(action==='print-qt'){ printQt(state.quotations.find(q=>q.id===t.dataset.id)); return; }
+    if(action==='qt-to-receipt'){
+      const qt = state.quotations.find(q=>q.id===t.dataset.id);
+      newRcForm(null, qt);
+      modal={type:'rc', payload:null}; render();
+      return;
+    }
+
+    /* RECEIPTS */
+    if(action==='new-rc'){
+      if(state.clients.length===0){ showToast('กรุณาเพิ่มลูกค้าก่อน'); return; }
+      newRcForm(null,null); modal={type:'rc', payload:null}; render(); return;
+    }
+    if(action==='edit-rc'){ newRcForm(state.receipts.find(r=>r.id===t.dataset.id)); modal={type:'rc', payload:null}; render(); return; }
+    if(action==='delete-rc'){
+      if(confirm('ลบใบเสร็จนี้หรือไม่? (รายการรายรับที่เกี่ยวข้องจะถูกลบด้วย)')){
+        removeTransactionsForReceipt(t.dataset.id);
+        state.receipts = state.receipts.filter(r=>r.id!==t.dataset.id);
+        await saveState(); render(); showToast('ลบแล้ว');
+      }
+      return;
+    }
+    if(action==='rc-add-row'){ rcForm.items.push({desc:'', amount:0}); render(); return; }
+    if(action==='rc-remove-row'){
+      rcForm.items.splice(Number(t.dataset.idx),1);
+      if(rcForm.items.length===0) rcForm.items.push({desc:'',amount:0});
+      render(); return;
+    }
+    if(action==='save-rc'){
+      rcForm.clientId = document.getElementById('rc-client').value;
+      rcForm.date = document.getElementById('rc-date').value;
+      rcForm.refQt = document.getElementById('rc-refqt').value.trim();
+      rcForm.paymentMethod = document.getElementById('rc-method').value;
+      rcForm.whtEnabled = document.getElementById('rc-wht-enabled').checked;
+      rcForm.whtRate = Number(document.getElementById('rc-wht-rate').value)||0;
+      const isNew = !rcForm.id;
+      if(!isNew){
+        removeTransactionsForReceipt(rcForm.id);
+        const i = state.receipts.findIndex(r=>r.id===rcForm.id);
+        state.receipts[i] = rcForm;
+      } else {
+        rcForm.id = uid('rc');
+        state.receipts.push(rcForm);
+        state.counters.rc += 1;
+      }
+      addTransactionFromReceipt(rcForm);
+      await saveState(); modal=null; render(); showToast('บันทึกใบเสร็จแล้ว');
+      return;
+    }
+    if(action==='print-rc'){ printRc(state.receipts.find(r=>r.id===t.dataset.id)); return; }
+    if(action==='toggle-wht-cert'){
+      // handled on 'change' for the checkbox variant; this covers non-checkbox triggers (safety no-op)
+      return;
+    }
+    if(action==='mark-wht-cert-received'){
+      const r = state.receipts.find(r=>r.id===t.dataset.id);
+      r.whtCertReceived = true;
+      await saveState(); render(); showToast('ทำเครื่องหมายว่าได้รับ 50 ทวิ แล้ว');
+      return;
+    }
+
+    /* TRANSACTIONS */
+    if(action==='new-tx'){ newTxForm(); modal={type:'tx', payload:null}; render(); return; }
+    if(action==='edit-tx'){ newTxForm(state.transactions.find(x=>x.id===t.dataset.id)); modal={type:'tx', payload:null}; render(); return; }
+    if(action==='save-tx'){
+      txForm.date = document.getElementById('tx-date').value;
+      txForm.category = document.getElementById('tx-category').value;
+      txForm.description = document.getElementById('tx-desc').value.trim();
+      txForm.amount = Number(document.getElementById('tx-amount').value)||0;
+      txForm.vatEnabled = document.getElementById('tx-vat-enabled').checked;
+      txForm.vatRate = Number(document.getElementById('tx-vat-rate').value)||0;
+      txForm.whtEnabled = document.getElementById('tx-wht-enabled').checked;
+      if(txForm.whtEnabled){
+        txForm.payeeName = document.getElementById('tx-payee-name').value.trim();
+        txForm.payeeTaxId = document.getElementById('tx-payee-taxid').value.trim();
+        txForm.payeeAddress = document.getElementById('tx-payee-address').value.trim();
+        txForm.whtType = document.getElementById('tx-wht-type').value;
+        txForm.whtRate = Number(document.getElementById('tx-wht-rate').value)||0;
+      }
+      if(txForm.amount<=0){ showToast('กรุณากรอกจำนวนเงิน'); return; }
+      if(txForm.whtEnabled && !txForm.payeeName){ showToast('กรุณากรอกชื่อผู้รับเงิน'); return; }
+      if(txForm.whtEnabled && !txForm.certNo) txForm.certNo = nextWhtCertNo();
+      if(txForm.id){
+        const i = state.transactions.findIndex(x=>x.id===txForm.id);
+        state.transactions[i] = {...txForm, type:'expense'};
+      } else {
+        state.transactions.push({id:uid('tx'), type:'expense', ...txForm});
+      }
+      await saveState(); modal=null; render(); showToast('บันทึกรายจ่ายแล้ว');
+      return;
+    }
+    if(action==='delete-tx'){
+      if(confirm('ลบรายการนี้หรือไม่?')){ state.transactions = state.transactions.filter(x=>x.id!==t.dataset.id); await saveState(); render(); showToast('ลบแล้ว'); }
+      return;
+    }
+    if(action==='print-wht'){ printWht50(state.transactions.find(x=>x.id===t.dataset.id)); return; }
+
+    /* SETTINGS */
+    if(action==='save-settings'){
+      state.settings = {
+        companyName: document.getElementById('s-name').value.trim(),
+        taxId: document.getElementById('s-taxid').value.trim(),
+        address: document.getElementById('s-address').value.trim(),
+        phone: document.getElementById('s-phone').value.trim(),
+        email: document.getElementById('s-email').value.trim(),
+        website: document.getElementById('s-website').value.trim(),
+        signatoryName: document.getElementById('s-signatory').value.trim(),
+        vatRegistered: document.getElementById('s-vat').checked,
+        defaultWhtRate: Number(document.getElementById('s-wht').value)||3,
+        bankName: document.getElementById('s-bank-name').value.trim(),
+        bankBranch: document.getElementById('s-bank-branch').value.trim(),
+        bankAccountType: document.getElementById('s-bank-type').value.trim(),
+        bankAccountNo: document.getElementById('s-bank-no').value.trim(),
+        bankAccountName: document.getElementById('s-bank-acname').value.trim(),
+      };
+      await saveState(); showToast('บันทึกการตั้งค่าแล้ว'); render();
+      return;
+    }
+  };
+
+  // change handlers (selects, checkboxes, item inputs) via delegation
+  app.onchange = async (e)=>{
+    if(e.target.id==='qt-type'){
+      qtForm.qtType = e.target.value;
+      render();
+      return;
+    }
+    if(e.target.id==='rc-wht-enabled'){
+      rcForm.whtEnabled = e.target.checked;
+      render();
+      return;
+    }
+    if(e.target.id==='qt-wht-enabled'){
+      qtForm.whtEnabled = e.target.checked;
+      render();
+      return;
+    }
+    if(e.target.id==='tx-vat-enabled'){
+      txForm.vatEnabled = e.target.checked;
+      render();
+      return;
+    }
+    if(e.target.id==='tx-wht-enabled'){
+      txForm.whtEnabled = e.target.checked;
+      render();
+      return;
+    }
+    if(e.target.id==='tx-wht-type'){
+      const opt = WHT_INCOME_TYPES.find(o=>o.code===e.target.value);
+      txForm.whtType = e.target.value;
+      if(opt) txForm.whtRate = opt.rate;
+      render();
+      return;
+    }
+    if(e.target.id==='tx-year-filter'){ txFilter.year = Number(e.target.value); render(); return; }
+    if(e.target.id==='tx-type-filter'){ txFilter.type = e.target.value; render(); return; }
+    if(e.target.id==='tax-year-filter'){ taxYear = Number(e.target.value); render(); return; }
+
+    const t = e.target.closest('[data-action]');
+    if(!t) return;
+    const action = t.dataset.action;
+
+    if(action==='qt-status'){
+      const q = state.quotations.find(q=>q.id===t.dataset.id);
+      q.status = t.value; await saveState(); render(); showToast('อัปเดตสถานะแล้ว');
+      return;
+    }
+    if(action==='toggle-wht-cert'){
+      const r = state.receipts.find(r=>r.id===t.dataset.id);
+      r.whtCertReceived = t.checked; await saveState(); render();
+      return;
+    }
+    if(action==='qt-item-input'){
+      const row = t.closest('.itemrow');
+      const list = row.dataset.list, idx = Number(row.dataset.idx), field = t.dataset.field;
+      qtForm[list][idx][field] = field==='desc' ? t.value : Number(t.value)||0;
+      render(); return;
+    }
+    if(action==='rc-item-input'){
+      const row = t.closest('.itemrow');
+      const idx = Number(row.dataset.idx), field = t.dataset.field;
+      rcForm.items[idx][field] = field==='desc' ? t.value : Number(t.value)||0;
+      render(); return;
+    }
+  };
+
+  // live input for item rows (keyup for instant total updates) + wht toggle live update
+  app.oninput = (e)=>{
+    const t = e.target;
+    if(t.dataset && t.dataset.action==='qt-item-input'){
+      const row = t.closest('.itemrow');
+      const list = row.dataset.list, idx = Number(row.dataset.idx), field = t.dataset.field;
+      qtForm[list][idx][field] = field==='desc' ? t.value : Number(t.value)||0;
+      // update total display without full re-render (avoid losing focus)
+      const totalEl = row.querySelector('div');
+      if(totalEl) totalEl.textContent = fmt(qtRowTotal(qtForm[list][idx]));
+      updateQtTotalsBox();
+    }
+    if(t.dataset && t.dataset.action==='rc-item-input'){
+      const row = t.closest('.itemrow');
+      const idx = Number(row.dataset.idx), field = t.dataset.field;
+      rcForm.items[idx][field] = field==='desc' ? t.value : Number(t.value)||0;
+      updateRcTotalsBox();
+    }
+    if(t.id==='rc-wht-rate'){
+      rcForm.whtRate = Number(t.value)||0;
+      updateRcTotalsBox();
+    }
+    if(t.id==='qt-wht-rate'){
+      qtForm.whtRate = Number(t.value)||0;
+      updateQtTotalsBox();
+    }
+    if(t.id==='tx-amount'){
+      txForm.amount = Number(t.value)||0;
+      updateTxTotalsBox();
+    }
+    if(t.id==='tx-wht-rate'){
+      txForm.whtRate = Number(t.value)||0;
+      updateTxTotalsBox();
+    }
+    if(t.id==='tx-vat-rate'){
+      txForm.vatRate = Number(t.value)||0;
+      updateTxTotalsBox();
+    }
+  };
+}
+
+function updateQtTotalsBox(){
+  const box = document.querySelector('.totals-box');
+  if(!box) return;
+  box.innerHTML = qtTotalsBoxHtml(qtForm);
+}
+function updateRcTotalsBox(){
+  const box = document.querySelector('.totals-box');
+  if(!box) return;
+  const gross = rcGross(rcForm), wht = rcWht(rcForm), net = rcNet(rcForm);
+  box.innerHTML = `
+    <div class="totals-row"><span class="lbl">รวมเป็นเงิน (ก่อนหัก)</span><span>${fmt(gross)} บาท</span></div>
+    <div class="totals-row"><span class="lbl">หัก ณ ที่จ่าย</span><span>- ${fmt(wht)} บาท</span></div>
+    <div class="totals-row grand"><span class="lbl">รับสุทธิ</span><span>${fmt(net)} บาท</span></div>
+  `;
+}
+function updateTxTotalsBox(){
+  const box = document.querySelector('.totals-box');
+  if(!box) return;
+  box.innerHTML = txTotalsBoxHtml(txForm);
+}
+
+/* ============================= INIT ============================= */
+(async function init(){
+  document.getElementById('app').innerHTML = `<div style="padding:40px; font-family:sans-serif; color:#6B7280;">กำลังโหลดข้อมูล…</div>`;
+  try{
+    state = await loadState();
+  }catch(e){
+    console.error('Storage load failed', e);
+    document.getElementById('app').innerHTML = `<div style="padding:40px; font-family:sans-serif; color:#B42318;">
+      โหลดข้อมูลไม่สำเร็จ (อาจหมดเวลาเข้าสู่ระบบหรืออินเทอร์เน็ตขัดข้อง)<br><br>
+      <button class="btn btn-primary" onclick="location.reload()">โหลดใหม่ / เข้าสู่ระบบ</button></div>`;
+    return;
+  }
+  seedIfEmpty();
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+# Copy to .dev.vars for local development (never commit .dev.vars)
+DEV_BYPASS_AUTH=true
