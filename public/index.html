@@ -87,6 +87,24 @@
   .stat .val.amber{color:var(--amber);}
   .stat .hint{font-size:12px; color:var(--muted); margin-top:4px;}
 
+  /* Dashboard chart */
+  :root{ --series-income:#1A8C78; --series-expense:#B45309; }
+  .chart-head{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;}
+  .chart-head h3{margin:0;}
+  .chart-controls{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .seg{display:inline-flex; border:1px solid var(--border); border-radius:8px; overflow:hidden;}
+  .seg button{border:none; background:#fff; padding:6px 12px; font-family:'Sarabun',sans-serif; font-size:13px; cursor:pointer; color:var(--text);}
+  .seg button + button{border-left:1px solid var(--border);}
+  .seg button.on{background:var(--navy); color:#fff; font-weight:600;}
+  .chart-legend{display:flex; gap:16px; font-size:13px; color:var(--muted); margin-bottom:6px;}
+  .chart-legend .sw{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:middle;}
+  .chart-wrap{position:relative;}
+  .chart-wrap svg{display:block; width:100%; height:auto;}
+  .chart-tip{position:absolute; pointer-events:none; background:var(--navy); color:#fff; border-radius:8px; padding:8px 10px; font-size:12.5px; line-height:1.5; white-space:nowrap; box-shadow:0 4px 14px rgba(0,0,0,.18); transform:translate(-50%, -100%); display:none; z-index:5;}
+  .chart-tip .sw{display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px;}
+  .chart-hit{fill:transparent; cursor:default;}
+  .chart-hit:hover{fill:rgba(27,42,74,0.05);}
+
   table{width:100%; border-collapse:collapse; font-size:14px;}
   th{
     text-align:left; background:var(--navy); color:#fff; font-weight:600; font-size:12.5px;
@@ -306,11 +324,14 @@ function qtGrossActive(qt){
   if(qt.qtType==='annual') return t.ann;
   return t.one;
 }
+// VAT is added on top of the pre-VAT amount; WHT is always calculated on the pre-VAT amount.
+function qtVat(qt){ return qt.vatEnabled ? qtGrossActive(qt) * (Number(qt.vatRate)||0)/100 : 0; }
 function qtWht(qt){ return qt.whtEnabled ? qtGrossActive(qt) * (Number(qt.whtRate)||0)/100 : 0; }
-function qtNet(qt){ return qtGrossActive(qt) - qtWht(qt); }
+function qtNet(qt){ return qtGrossActive(qt) + qtVat(qt) - qtWht(qt); }
 function rcGross(rc){ return (rc.items||[]).reduce((s,i)=>s+(Number(i.amount)||0),0); }
+function rcVat(rc){ return rc.vatEnabled ? rcGross(rc) * (Number(rc.vatRate)||0)/100 : 0; }
 function rcWht(rc){ return rc.whtEnabled ? rcGross(rc) * (Number(rc.whtRate)||0)/100 : 0; }
-function rcNet(rc){ return rcGross(rc) - rcWht(rc); }
+function rcNet(rc){ return rcGross(rc) + rcVat(rc) - rcWht(rc); }
 
 /* WHT income-type presets for outgoing payments (Techfinder as payer / withholding agent) */
 const WHT_INCOME_TYPES = [
@@ -359,6 +380,54 @@ function removeTransactionsForReceipt(rcId){
   state.transactions = state.transactions.filter(t=>t.relatedReceiptId!==rcId);
 }
 
+// Copies what the user has typed in an open form's plain fields back into the form object.
+// Without this, any re-render (adding a row, editing an item, ticking a checkbox) redraws
+// these fields from stale values: the client jumps back to the first one and the project name is lost.
+// Rates and checkboxes are left out on purpose: their own handlers keep them in sync.
+function syncOpenForm(){
+  if(!modal) return;
+  const val = id => { const el = document.getElementById(id); return el ? el.value : undefined; };
+  const set = (obj, key, v, f) => { if(obj && v!==undefined) obj[key] = f ? f(v) : v; };
+  if(modal.type==='qt'){
+    set(qtForm,'clientId',val('qt-client'));
+    set(qtForm,'date',val('qt-date'));
+    set(qtForm,'validDays',val('qt-validdays'), v=>Number(v)||30);
+    set(qtForm,'projectName',val('qt-project'));
+  }
+  if(modal.type==='rc'){
+    set(rcForm,'clientId',val('rc-client'));
+    set(rcForm,'date',val('rc-date'));
+    set(rcForm,'refQt',val('rc-refqt'));
+    set(rcForm,'paymentMethod',val('rc-method'));
+  }
+  if(modal.type==='tx'){
+    set(txForm,'date',val('tx-date'));
+    set(txForm,'category',val('tx-category'));
+    set(txForm,'description',val('tx-desc'));
+    set(txForm,'payeeName',val('tx-payee-name'));
+    set(txForm,'payeeTaxId',val('tx-payee-taxid'));
+    set(txForm,'payeeAddress',val('tx-payee-address'));
+  }
+}
+
+// VAT on/off + rate box shared by the quotation and receipt forms.
+function vatBoxHtml(prefix, f){
+  const s = state.settings;
+  return `
+    <div class="card" style="background:#FAFBFC; margin-top:16px; padding:14px 16px;">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:14px; cursor:pointer;">
+        <input type="checkbox" id="${prefix}-vat-enabled" ${f.vatEnabled?'checked':''}> บวกภาษีมูลค่าเพิ่ม (VAT)
+      </label>
+      <div style="display:flex; align-items:center; gap:8px; margin-top:10px; ${f.vatEnabled?'':'opacity:.4; pointer-events:none;'}">
+        <span style="font-size:13.5px;">อัตรา</span>
+        <input type="number" id="${prefix}-vat-rate" value="${f.vatRate}" style="width:70px;">
+        <span style="font-size:13.5px;">%</span>
+        <span style="color:var(--muted); font-size:12.5px; margin-left:8px;">(VAT ปกติ = 7% บวกเพิ่มจากราคาก่อน VAT)</span>
+      </div>
+      ${f.vatEnabled && !s.vatRegistered ? `<div style="color:var(--amber); font-size:12.5px; margin-top:8px;">⚠ ในหน้าตั้งค่าบริษัทยังไม่ได้ติ๊ก "จดทะเบียนภาษีมูลค่าเพิ่ม" กิจการที่ยังไม่จด VAT เรียกเก็บ VAT จากลูกค้าไม่ได้</div>` : ''}
+    </div>`;
+}
+
 /* ============================= RENDER SHELL ============================= */
 const NAV = [
   {sec:'ภาพรวม', items:[
@@ -379,6 +448,7 @@ const NAV = [
 ];
 
 function render(){
+  syncOpenForm();
   const app = document.getElementById('app');
   app.innerHTML = `
     <div class="sidebar no-print">
@@ -423,6 +493,118 @@ function renderView(){
 }
 
 /* ============================= DASHBOARD ============================= */
+let dashFilter = {period:'quarter', year: new Date().getFullYear()};
+
+const TH_MONTH_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+// Income = recorded income (pre-VAT); expense = invoice total incl. VAT, same as the stat tiles.
+function periodBuckets(){
+  const {period, year} = dashFilter;
+  let buckets;
+  if(period==='year'){
+    const years = allYears().slice(0,5).reverse();
+    buckets = years.map(y=>({label:`ปี ${y+543}`, sub:'', match:d=>yearOf(d)===y}));
+  } else {
+    const size = period==='half' ? 6 : 3;
+    const n = 12/size;
+    buckets = Array.from({length:n}, (_,i)=>({
+      label: period==='half' ? (i===0 ? 'ครึ่งปีแรก' : 'ครึ่งปีหลัง') : `ไตรมาส ${i+1}`,
+      sub: `${TH_MONTH_SHORT[i*size]}–${TH_MONTH_SHORT[i*size+size-1]}`,
+      match: d => d && yearOf(d)===year && Math.floor((Number(d.slice(5,7))-1)/size)===i,
+    }));
+  }
+  return buckets.map(b=>{
+    const tx = state.transactions.filter(t=>b.match(t.date));
+    const income = tx.filter(t=>t.type==='income').reduce((s,t)=>s+(Number(t.amount)||0),0);
+    const expense = tx.filter(t=>t.type==='expense').reduce((s,t)=>s+txInvoiceTotal(t),0);
+    return {label:b.label, sub:b.sub, income, expense, profit:income-expense};
+  });
+}
+
+function fmtShort(n){
+  const a = Math.abs(n);
+  if(a>=1e6) return (n/1e6).toLocaleString('th-TH',{maximumFractionDigits:1})+'M';
+  if(a>=1e3) return (n/1e3).toLocaleString('th-TH',{maximumFractionDigits:1})+'K';
+  return n.toLocaleString('th-TH',{maximumFractionDigits:0});
+}
+
+function niceMax(v){
+  if(v<=0) return 1000;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  for(const m of [1,1.5,2,2.5,3,4,5,6,8,10]) if(m*p>=v) return m*p;
+  return 10*p;
+}
+
+// Bar with 4px rounded top, flat on the baseline.
+function barPath(x, y, w, h){
+  if(h<=0) return '';
+  const r = Math.min(4, w/2, h);
+  return `M${x},${y+h} V${y+r} Q${x},${y} ${x+r},${y} H${x+w-r} Q${x+w},${y} ${x+w},${y+r} V${y+h} Z`;
+}
+
+function dashChartSvg(rows){
+  const W=720, H=280, padL=52, padR=12, padT=12, padB=46;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const max = niceMax(Math.max(...rows.map(r=>Math.max(r.income, r.expense)), 0));
+  const ticks = [0,0.25,0.5,0.75,1].map(f=>f*max);
+  const yOf = v => padT + plotH - (v/max)*plotH;
+  const groupW = plotW/rows.length;
+  const barW = Math.min(44, (groupW*0.6-2)/2);
+  const grid = ticks.map(v=>`
+    <line x1="${padL}" x2="${W-padR}" y1="${yOf(v)}" y2="${yOf(v)}" stroke="${v===0?'#C9CED6':'#E3E6EB'}" stroke-width="1"/>
+    <text x="${padL-8}" y="${yOf(v)+4}" text-anchor="end" font-size="11" fill="#6B7280">${fmtShort(v)}</text>`).join('');
+  const bars = rows.map((r,i)=>{
+    const cx = padL + groupW*i + groupW/2;
+    const xI = cx - barW - 1, xE = cx + 1;
+    const hI = (r.income/max)*plotH, hE = (r.expense/max)*plotH;
+    const tip = `<b>${esc(r.label)}${r.sub?' ('+r.sub+')':''}</b><br>`+
+      `<span class='sw' style='background:var(--series-income)'></span>รายรับ ${fmt(r.income)} บาท<br>`+
+      `<span class='sw' style='background:var(--series-expense)'></span>รายจ่าย ${fmt(r.expense)} บาท<br>`+
+      `${r.profit>=0?'กำไร':'ขาดทุน'} ${fmt(Math.abs(r.profit))} บาท`;
+    return `
+      <rect class="chart-hit" x="${padL+groupW*i}" y="${padT}" width="${groupW}" height="${plotH}" data-tip="${escAttr(tip)}" data-tip-x="${cx}" data-tip-y="${yOf(Math.max(r.income,r.expense))}"></rect>
+      <path d="${barPath(xI, yOf(r.income), barW, hI)}" fill="var(--series-income)" pointer-events="none"/>
+      <path d="${barPath(xE, yOf(r.expense), barW, hE)}" fill="var(--series-expense)" pointer-events="none"/>
+      <text x="${cx}" y="${H-padB+18}" text-anchor="middle" font-size="12" fill="#1B222E" font-weight="600">${esc(r.label)}</text>
+      ${r.sub?`<text x="${cx}" y="${H-padB+34}" text-anchor="middle" font-size="11" fill="#6B7280">${r.sub}</text>`:''}`;
+  }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="กราฟรายรับและรายจ่าย">${grid}${bars}</svg>`;
+}
+
+function dashChartCard(){
+  const rows = periodBuckets();
+  const {period, year} = dashFilter;
+  const years = allYears();
+  const totals = rows.reduce((a,r)=>({income:a.income+r.income, expense:a.expense+r.expense}), {income:0, expense:0});
+  const profit = totals.income - totals.expense;
+  const btn = (v, l) => `<button data-action="dash-period" data-period="${v}" class="${period===v?'on':''}">${l}</button>`;
+  return `
+    <div class="card">
+      <div class="chart-head">
+        <h3>รายรับ - รายจ่าย ${period==='year' ? 'รายปี' : (period==='half'?'รายครึ่งปี':'รายไตรมาส')+' ปี '+(year+543)}</h3>
+        <div class="chart-controls">
+          <div class="seg">${btn('quarter','รายไตรมาส')}${btn('half','รายครึ่งปี')}${btn('year','รายปี')}</div>
+          ${period==='year' ? '' : `<select id="dash-year" style="width:auto; padding:5px 8px; font-size:13px;">${years.map(y=>`<option value="${y}" ${y===year?'selected':''}>ปี ${y+543}</option>`).join('')}</select>`}
+        </div>
+      </div>
+      <div class="chart-legend">
+        <span><span class="sw" style="background:var(--series-income)"></span>รายรับ</span>
+        <span><span class="sw" style="background:var(--series-expense)"></span>รายจ่าย</span>
+      </div>
+      <div class="chart-wrap">${dashChartSvg(rows)}<div class="chart-tip"></div></div>
+      <table style="margin-top:12px;">
+        <thead><tr><th>ช่วงเวลา</th><th class="num">รายรับ</th><th class="num">รายจ่าย</th><th class="num">กำไร (ขาดทุน)</th></tr></thead>
+        <tbody>
+          ${rows.map(r=>`<tr><td>${esc(r.label)}${r.sub?` <span style="color:var(--muted); font-size:12px;">${r.sub}</span>`:''}</td>
+            <td class="num">${fmt(r.income)}</td><td class="num">${fmt(r.expense)}</td>
+            <td class="num" style="color:${r.profit<0?'var(--red)':'var(--text)'}; font-weight:600;">${r.profit<0?'(':''}${fmt(Math.abs(r.profit))}${r.profit<0?')':''}</td></tr>`).join('')}
+          <tr><td><b>รวม</b></td><td class="num"><b>${fmt(totals.income)}</b></td><td class="num"><b>${fmt(totals.expense)}</b></td>
+            <td class="num" style="color:${profit<0?'var(--red)':'var(--text)'};"><b>${profit<0?'(':''}${fmt(Math.abs(profit))}${profit<0?')':''}</b></td></tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
 function viewDashboard(){
   const year = new Date().getFullYear();
   const incomeYtd = state.transactions.filter(t=>t.type==='income' && yearOf(t.date)===year).reduce((s,t)=>s+Number(t.amount||0),0);
@@ -447,6 +629,8 @@ function viewDashboard(){
       <div class="stat"><div class="label">เครดิตภาษีหัก ณ ที่จ่าย</div><div class="val amber">${fmt(whtCreditYtd)}</div><div class="hint">สะสมปีนี้ (ต้องมี 50 ทวิ ครบ)</div></div>
       <div class="stat"><div class="label">ใบเสนอราคาที่ยังเปิดอยู่</div><div class="val">${openQt}</div><div class="hint">ฉบับ (ร่าง/ส่งแล้ว รออนุมัติ)</div></div>
     </div>
+
+    ${dashChartCard()}
 
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
       <div class="card">
@@ -557,7 +741,7 @@ function viewQuotations(){
               <td>${esc(clientName(q.clientId))}</td>
               <td>${esc(q.projectName||'-')}</td>
               <td>${badge}</td>
-              <td class="num">${fmt(qtGrossActive(q))}${q.qtType==='recurring'?' /เดือน':''}${q.whtEnabled?`<br><span style="color:var(--muted); font-size:11.5px; font-weight:400;">สุทธิหลังหัก ${fmt(q.whtRate)}%: ${fmt(qtNet(q))}</span>`:''}</td>
+              <td class="num">${fmt(qtGrossActive(q))}${q.qtType==='recurring'?' /เดือน':''}${q.whtEnabled||q.vatEnabled?`<br><span style="color:var(--muted); font-size:11.5px; font-weight:400;">${[q.vatEnabled?`+VAT ${fmt(q.vatRate)}%`:'', q.whtEnabled?`หัก ${fmt(q.whtRate)}%`:''].filter(Boolean).join(' ')} สุทธิ: ${fmt(qtNet(q))}</span>`:''}</td>
               <td>
                 <select data-action="qt-status" data-id="${q.id}" style="width:auto; padding:4px 6px; font-size:12.5px;">
                   <option value="draft" ${q.status==='draft'?'selected':''}>ร่าง</option>
@@ -592,8 +776,11 @@ function newQtForm(existing){
       recurringItems:[{desc:'', qty:1, unitPrice:0}],
       annualItems:[{desc:'', qty:1, unitPrice:0, months:12}],
       whtEnabled:true, whtRate: state.settings.defaultWhtRate||3,
+      vatEnabled: !!state.settings.vatRegistered, vatRate:7,
     };
   }
+  if(qtForm.vatEnabled===undefined) qtForm.vatEnabled = false;
+  if(qtForm.vatRate===undefined) qtForm.vatRate = 7;
   if(!qtForm.annualItems) qtForm.annualItems = [{desc:'', qty:1, unitPrice:0, months:12}];
   if(qtForm.whtEnabled===undefined) qtForm.whtEnabled = false;
   if(qtForm.whtRate===undefined) qtForm.whtRate = state.settings.defaultWhtRate||3;
@@ -645,6 +832,8 @@ function qtModal(){
     </div>
     `}
 
+    ${vatBoxHtml('qt', f)}
+
     <div class="card" style="background:#FAFBFC; margin-top:16px; padding:14px 16px;">
       <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:14px; cursor:pointer;">
         <input type="checkbox" id="qt-wht-enabled" ${f.whtEnabled?'checked':''}> หักภาษี ณ ที่จ่าย (ประมาณการ)
@@ -653,7 +842,7 @@ function qtModal(){
         <span style="font-size:13.5px;">อัตรา</span>
         <input type="number" id="qt-wht-rate" value="${f.whtRate}" style="width:70px;">
         <span style="font-size:13.5px;">%</span>
-        <span style="color:var(--muted); font-size:12.5px; margin-left:8px;">(ค่าบริการทั่วไป = 3% ตามปกติ)</span>
+        <span style="color:var(--muted); font-size:12.5px; margin-left:8px;">(ค่าบริการทั่วไป = 3% คิดจากยอดก่อน VAT)</span>
       </div>
     </div>
 
@@ -668,14 +857,21 @@ function qtModal(){
 function qtTotalsBoxHtml(f){
   const label = f.qtType==='recurring' ? 'รายเดือน' : f.qtType==='annual' ? 'License รายปี' : 'One-time';
   const unit = f.qtType==='recurring' ? 'บาท / เดือน' : 'บาท';
-  const gross = qtGrossActive(f), wht = qtWht(f), net = qtNet(f);
-  if(!f.whtEnabled){
-    return `<div class="totals-row grand"><span class="lbl">รวม ${label}</span><span>${fmt(gross)} ${unit}</span></div>`;
+  return taxTotalsHtml(`รวม ${label}`, 'รับสุทธิโดยประมาณ', qtGrossActive(f), f, unit);
+}
+// Totals rows for a pre-VAT amount with optional VAT (+) and WHT (-), shared by quotations and receipts.
+function taxTotalsHtml(label, netLabel, gross, f, unit){
+  const vat = f.vatEnabled ? gross*(Number(f.vatRate)||0)/100 : 0;
+  const wht = f.whtEnabled ? gross*(Number(f.whtRate)||0)/100 : 0;
+  if(!f.vatEnabled && !f.whtEnabled){
+    return `<div class="totals-row grand"><span class="lbl">${label}</span><span>${fmt(gross)} ${unit}</span></div>`;
   }
   return `
-    <div class="totals-row"><span class="lbl">รวม ${label} (ก่อนหัก)</span><span>${fmt(gross)} ${unit}</span></div>
-    <div class="totals-row"><span class="lbl">หัก ณ ที่จ่าย ${fmt(f.whtRate)}%</span><span>- ${fmt(wht)} ${unit}</span></div>
-    <div class="totals-row grand"><span class="lbl">รับสุทธิโดยประมาณ</span><span>${fmt(net)} ${unit}</span></div>
+    <div class="totals-row"><span class="lbl">${label} (ก่อน VAT/ก่อนหัก)</span><span>${fmt(gross)} ${unit}</span></div>
+    ${f.vatEnabled?`<div class="totals-row"><span class="lbl">ภาษีมูลค่าเพิ่ม ${fmt(f.vatRate)}%</span><span>+ ${fmt(vat)} ${unit}</span></div>
+    <div class="totals-row"><span class="lbl">รวมทั้งสิ้น (รวม VAT)</span><span>${fmt(gross+vat)} ${unit}</span></div>`:''}
+    ${f.whtEnabled?`<div class="totals-row"><span class="lbl">หัก ณ ที่จ่าย ${fmt(f.whtRate)}% (จากยอดก่อน VAT)</span><span>- ${fmt(wht)} ${unit}</span></div>`:''}
+    <div class="totals-row grand"><span class="lbl">${f.whtEnabled?netLabel:'ยอดชำระทั้งสิ้น'}</span><span>${fmt(gross+vat-wht)} ${unit}</span></div>
   `;
 }
 function qtItemRow(list, it, idx){
@@ -747,6 +943,7 @@ function newRcForm(existing, fromQt){
       items: items.length?items:[{desc:'', amount:0}],
       whtEnabled: fromQt.whtEnabled!==undefined ? fromQt.whtEnabled : true,
       whtRate: fromQt.whtRate!==undefined ? fromQt.whtRate : (state.settings.defaultWhtRate||3),
+      vatEnabled: !!fromQt.vatEnabled, vatRate: fromQt.vatRate!==undefined ? fromQt.vatRate : 7,
       whtCertReceived:false,
       paymentMethod:'โอนเงินผ่านธนาคาร', note:''
     };
@@ -755,14 +952,16 @@ function newRcForm(existing, fromQt){
       id:null, receiptNo:nextRcNo(), date:todayISO(), clientId: state.clients[0]?state.clients[0].id:'', refQt:'',
       items:[{desc:'', amount:0}],
       whtEnabled:false, whtRate: state.settings.defaultWhtRate||3, whtCertReceived:false,
+      vatEnabled: !!state.settings.vatRegistered, vatRate:7,
       paymentMethod:'โอนเงินผ่านธนาคาร', note:''
     };
   }
+  if(rcForm.vatEnabled===undefined) rcForm.vatEnabled = false;
+  if(rcForm.vatRate===undefined) rcForm.vatRate = 7;
 }
 
 function rcModal(){
   const f = rcForm;
-  const gross = rcGross(f), wht = rcWht(f), net = rcNet(f);
   return `
     <h2>${f.id?'แก้ไขใบเสร็จ':'ออกใบเสร็จรับเงิน'}</h2>
     <div class="modal-sub">เลขที่ ${f.receiptNo}</div>
@@ -787,6 +986,8 @@ function rcModal(){
       <button class="btn btn-ghost btn-sm addrow-btn" data-action="rc-add-row">+ เพิ่มรายการ</button>
     </div>
 
+    ${vatBoxHtml('rc', f)}
+
     <div class="card" style="background:#FAFBFC; margin-top:16px; padding:14px 16px;">
       <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:14px; cursor:pointer;">
         <input type="checkbox" id="rc-wht-enabled" ${f.whtEnabled?'checked':''}> หักภาษี ณ ที่จ่าย
@@ -799,11 +1000,7 @@ function rcModal(){
       </div>
     </div>
 
-    <div class="totals-box">
-      <div class="totals-row"><span class="lbl">รวมเป็นเงิน (ก่อนหัก)</span><span>${fmt(gross)} บาท</span></div>
-      <div class="totals-row"><span class="lbl">หัก ณ ที่จ่าย</span><span>- ${fmt(wht)} บาท</span></div>
-      <div class="totals-row grand"><span class="lbl">รับสุทธิ</span><span>${fmt(net)} บาท</span></div>
-    </div>
+    <div class="totals-box">${rcTotalsBoxHtml(f)}</div>
 
     <div class="modal-actions">
       <button class="btn btn-ghost" data-action="close-modal">ยกเลิก</button>
@@ -811,6 +1008,7 @@ function rcModal(){
     </div>
   `;
 }
+function rcTotalsBoxHtml(f){ return taxTotalsHtml('รวมเป็นเงิน', 'รับสุทธิ', rcGross(f), f, 'บาท'); }
 function rcItemRow(it, idx){
   return `
     <div class="itemrow recv" data-idx="${idx}">
@@ -1089,13 +1287,17 @@ function printQt(qt){
   const type = qt.qtType==='recurring' ? 'recurring' : qt.qtType==='annual' ? 'annual' : 'one_time';
   const isOneTime = type==='one_time';
   const validUntil = addDays(qt.date, qt.validDays||30);
-  const wht = qtWht(qt), net = qtNet(qt);
+  const vat = qtVat(qt), wht = qtWht(qt), net = qtNet(qt);
   const unitLabel = type==='recurring' ? ' / เดือน' : '';
   const span = type==='annual' ? 4 : 3;
-  const whtRows = qt.whtEnabled ? `
-    <tr><td colspan="${span}">หัก ภาษี ณ ที่จ่าย ${fmt(qt.whtRate)}%</td><td class="num">- ${fmt(wht)}</td></tr>
-    <tr class="totalrow"><td colspan="${span}">รับสุทธิโดยประมาณ${unitLabel}</td><td class="num">${fmt(net)}</td></tr>
-  ` : '';
+  const whtRows = `
+    ${qt.vatEnabled ? `
+    <tr><td colspan="${span}">ภาษีมูลค่าเพิ่ม ${fmt(qt.vatRate)}%</td><td class="num">+ ${fmt(vat)}</td></tr>
+    <tr class="totalrow"><td colspan="${span}">รวมทั้งสิ้น (รวม VAT)${unitLabel}</td><td class="num">${fmt(qtGrossActive(qt)+vat)}</td></tr>` : ''}
+    ${qt.whtEnabled ? `
+    <tr><td colspan="${span}">หัก ภาษี ณ ที่จ่าย ${fmt(qt.whtRate)}% (จากยอดก่อน VAT)</td><td class="num">- ${fmt(wht)}</td></tr>
+    <tr class="totalrow"><td colspan="${span}">รับสุทธิโดยประมาณ${unitLabel}</td><td class="num">${fmt(net)}</td></tr>` : ''}
+  `;
 
   const itemTableHtml = type==='annual' ? `
     <table><thead><tr><th>License รายปี</th><th class="num">จำนวน</th><th class="num">ราคา/เดือน (บาท)</th><th class="num">จำนวนเดือน</th><th class="num">รวมราคา (บาท)</th></tr></thead>
@@ -1121,7 +1323,9 @@ function printQt(qt){
   `;
 
   const priceNotes = [
-    s.vatRegistered
+    qt.vatEnabled
+      ? `ราคาต่อรายการข้างต้นเป็นราคาก่อนภาษีมูลค่าเพิ่ม และได้บวก VAT ${fmt(qt.vatRate)}% ไว้ในยอดรวมทั้งสิ้นแล้ว`
+      : s.vatRegistered
       ? 'ราคาข้างต้นเป็นราคาก่อนภาษีมูลค่าเพิ่ม (VAT 7%) จะคำนวณ VAT เพิ่มในใบแจ้งหนี้ตามจริง'
       : `ราคาข้างต้นเป็นราคาสุทธิ ไม่มีภาษีมูลค่าเพิ่ม (${esc(s.companyName)} ยังไม่ได้จดทะเบียน VAT) จะออกเป็นใบเสร็จรับเงิน ไม่ใช่ใบกำกับภาษีเต็มรูปแบบ`,
     qt.whtEnabled ? `ยอด "รับสุทธิโดยประมาณ" หักภาษีเงินได้ ณ ที่จ่าย ${fmt(qt.whtRate)}% ไว้ล่วงหน้าเพื่อการประมาณการเท่านั้น ยอดหักจริงคำนวณจากใบเสร็จรับเงินฉบับจริงและหนังสือรับรองหัก ณ ที่จ่าย (50 ทวิ) ที่ได้รับ` : '',
@@ -1222,7 +1426,7 @@ function printQt(qt){
 function printRc(rc){
   const cl = state.clients.find(c=>c.id===rc.clientId) || {name:'-'};
   const s = state.settings;
-  const gross = rcGross(rc), wht = rcWht(rc), net = rcNet(rc);
+  const gross = rcGross(rc), vat = rcVat(rc), wht = rcWht(rc), net = rcNet(rc);
   const win = window.open('', '_blank');
   win.document.write(`
     <html><head><meta charset="utf-8"><title>${rc.receiptNo}</title>
@@ -1249,8 +1453,10 @@ function printRc(rc){
     <table><thead><tr><th>รายการ</th><th class="num">จำนวนเงิน</th></tr></thead>
     <tbody>
     ${rc.items.map(it=>`<tr><td>${esc(it.desc)}</td><td class="num">${fmt(it.amount)}</td></tr>`).join('')}
-    <tr class="totalrow"><td>รวมเป็นเงิน (ก่อนหัก)</td><td class="num">${fmt(gross)}</td></tr>
-    ${rc.whtEnabled?`<tr><td>หัก ภาษี ณ ที่จ่าย ${rc.whtRate}%</td><td class="num">- ${fmt(wht)}</td></tr>`:''}
+    <tr class="totalrow"><td>รวมเป็นเงิน (${rc.vatEnabled?'ก่อน VAT':'ก่อนหัก'})</td><td class="num">${fmt(gross)}</td></tr>
+    ${rc.vatEnabled?`<tr><td>ภาษีมูลค่าเพิ่ม ${fmt(rc.vatRate)}%</td><td class="num">+ ${fmt(vat)}</td></tr>
+    <tr class="totalrow"><td>รวมทั้งสิ้น (รวม VAT)</td><td class="num">${fmt(gross+vat)}</td></tr>`:''}
+    ${rc.whtEnabled?`<tr><td>หัก ภาษี ณ ที่จ่าย ${rc.whtRate}%${rc.vatEnabled?' (จากยอดก่อน VAT)':''}</td><td class="num">- ${fmt(wht)}</td></tr>`:''}
     <tr class="grand"><td>จำนวนเงินที่รับจริง (สุทธิ)</td><td class="num">${fmt(net)}</td></tr>
     </tbody></table>
     <p class="muted" style="margin-top:20px;">ช่องทางชำระ: ${esc(rc.paymentMethod||'-')}</p>
@@ -1376,6 +1582,8 @@ function bindEvents(){
     if(!t) return;
     const action = t.dataset.action;
 
+    if(action==='dash-period'){ dashFilter.period = t.dataset.period; render(); return; }
+
     if(action==='close-modal'){ modal=null; render(); return; }
 
     if(action==='new-client'){ modal={type:'client', payload:null}; render(); return; }
@@ -1431,6 +1639,8 @@ function bindEvents(){
       qtForm.projectName = document.getElementById('qt-project').value.trim();
       qtForm.whtEnabled = document.getElementById('qt-wht-enabled').checked;
       qtForm.whtRate = Number(document.getElementById('qt-wht-rate').value)||0;
+      qtForm.vatEnabled = document.getElementById('qt-vat-enabled').checked;
+      qtForm.vatRate = Number(document.getElementById('qt-vat-rate').value)||0;
       if(qtForm.id){
         const i = state.quotations.findIndex(q=>q.id===qtForm.id);
         state.quotations[i] = qtForm;
@@ -1477,6 +1687,8 @@ function bindEvents(){
       rcForm.paymentMethod = document.getElementById('rc-method').value;
       rcForm.whtEnabled = document.getElementById('rc-wht-enabled').checked;
       rcForm.whtRate = Number(document.getElementById('rc-wht-rate').value)||0;
+      rcForm.vatEnabled = document.getElementById('rc-vat-enabled').checked;
+      rcForm.vatRate = Number(document.getElementById('rc-vat-rate').value)||0;
       const isNew = !rcForm.id;
       if(!isNew){
         removeTransactionsForReceipt(rcForm.id);
@@ -1579,6 +1791,17 @@ function bindEvents(){
       render();
       return;
     }
+    if(e.target.id==='qt-vat-enabled'){
+      qtForm.vatEnabled = e.target.checked;
+      render();
+      return;
+    }
+    if(e.target.id==='rc-vat-enabled'){
+      rcForm.vatEnabled = e.target.checked;
+      render();
+      return;
+    }
+    if(e.target.id==='dash-year'){ dashFilter.year = Number(e.target.value); render(); return; }
     if(e.target.id==='tx-vat-enabled'){
       txForm.vatEnabled = e.target.checked;
       render();
@@ -1628,6 +1851,21 @@ function bindEvents(){
     }
   };
 
+  // chart tooltip: hover a period to see its exact figures
+  app.onmouseover = (e)=>{
+    const hit = e.target.closest && e.target.closest('.chart-hit');
+    const wrap = document.querySelector('.chart-wrap');
+    const tip = wrap && wrap.querySelector('.chart-tip');
+    if(!tip) return;
+    if(!hit){ tip.style.display='none'; return; }
+    const svg = wrap.querySelector('svg');
+    const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
+    tip.innerHTML = hit.dataset.tip;
+    tip.style.left = (Number(hit.dataset.tipX)*scale)+'px';
+    tip.style.top = (Number(hit.dataset.tipY)*scale - 8)+'px';
+    tip.style.display = 'block';
+  };
+
   // live input for item rows (keyup for instant total updates) + wht toggle live update
   app.oninput = (e)=>{
     const t = e.target;
@@ -1654,6 +1892,14 @@ function bindEvents(){
       qtForm.whtRate = Number(t.value)||0;
       updateQtTotalsBox();
     }
+    if(t.id==='qt-vat-rate'){
+      qtForm.vatRate = Number(t.value)||0;
+      updateQtTotalsBox();
+    }
+    if(t.id==='rc-vat-rate'){
+      rcForm.vatRate = Number(t.value)||0;
+      updateRcTotalsBox();
+    }
     if(t.id==='tx-amount'){
       txForm.amount = Number(t.value)||0;
       updateTxTotalsBox();
@@ -1677,12 +1923,7 @@ function updateQtTotalsBox(){
 function updateRcTotalsBox(){
   const box = document.querySelector('.totals-box');
   if(!box) return;
-  const gross = rcGross(rcForm), wht = rcWht(rcForm), net = rcNet(rcForm);
-  box.innerHTML = `
-    <div class="totals-row"><span class="lbl">รวมเป็นเงิน (ก่อนหัก)</span><span>${fmt(gross)} บาท</span></div>
-    <div class="totals-row"><span class="lbl">หัก ณ ที่จ่าย</span><span>- ${fmt(wht)} บาท</span></div>
-    <div class="totals-row grand"><span class="lbl">รับสุทธิ</span><span>${fmt(net)} บาท</span></div>
-  `;
+  box.innerHTML = rcTotalsBoxHtml(rcForm);
 }
 function updateTxTotalsBox(){
   const box = document.querySelector('.totals-box');
