@@ -1,0 +1,15 @@
+name = "techfinder-accounting"
+compatibility_date = "2025-09-01"
+pages_build_output_dir = "public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "techfinder-db"
+database_id = "fb02ed61-d874-4ccb-ae3c-b86287d89329"
+
+# Cloudflare Access login (Zero Trust > Access > Applications > Techfinder Accounting).
+# These are not secrets: the team domain is public and the AUD tag only identifies the app.
+# Who may log in is controlled by the Access policy (an email list) in the dashboard.
+[vars]
+ACCESS_TEAM_DOMAIN = "https://dark-river-f212.cloudflareaccess.com"
+ACCESS_AUD = "721b46efbf727a0982411950be4b8133edea0d225dae90931de7b73f3c04f674"
